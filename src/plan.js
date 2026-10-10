@@ -218,21 +218,27 @@ function partView(p, rule, course, left) {
 
 /** Short label for a course: initials of its main words, or the start of a one-word name. */
 export function shortName(name) {
+  // A name that carries its own abbreviation uses it: "Code of Civil Procedure (CPC)" -> "CPC".
+  const own = name.match(/\((\p{Lu}[\p{Lu}\p{N}]{1,5})\)\W*$/u);
+  if (own) return own[1];
   const stop = new Set(['and', 'of', 'in', 'for', 'the', 'to', 'with', 'on', 'a', 'an', '&']);
   const words = name
     .replace(/[^\p{L}\p{N}\s&]/gu, ' ')
     .split(/\s+/)
     .filter((w) => w && !stop.has(w.toLowerCase()));
   if (!words.length) return name.slice(0, 3);
-  // Numbers and Roman numerals stay whole ("Mathematics III" -> "M3"); the rest give initials.
+  // A small number or Roman numeral at the end stays whole ("Mathematics III" -> "M3");
+  // other numbers, such as a year, give no initial. The rest give initials.
   const roman = { I: 1, II: 2, III: 3, IV: 4, V: 5, VI: 6, VII: 7, VIII: 8, IX: 9, X: 10 };
   let tail = '';
   const last = words[words.length - 1];
-  if (words.length > 1 && /^\d+$/.test(last)) tail = words.pop();
+  if (words.length > 1 && /^\d{1,2}$/.test(last)) tail = words.pop();
   else if (words.length > 1 && roman[last.toUpperCase()]) tail = String(roman[words.pop().toUpperCase()]);
-  if (words.length === 1) return words[0].slice(0, tail ? 3 : 4) + tail;
+  const lettered = words.filter((w) => !/^\d+$/.test(w));
+  if (!lettered.length) return name.slice(0, 4);
+  if (lettered.length === 1) return lettered[0].slice(0, tail ? 3 : 4) + tail;
   return (
-    words
+    lettered
       .slice(0, 4)
       .map((w) => w[0].toUpperCase())
       .join('') + tail

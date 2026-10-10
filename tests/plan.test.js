@@ -86,6 +86,8 @@ test('short names', () => {
   assert.equal(shortName('Engineering Mathematics III'), 'EM3');
   assert.equal(shortName('Physics'), 'Phys');
   assert.equal(shortName('Physics 2'), 'Phy2');
+  assert.equal(shortName('Code of Civil Procedure, 1908 (CPC)'), 'CPC');
+  assert.equal(shortName('Companies Act 2013 and Compliance'), 'CAC');
 });
 
 test('dates', () => {
