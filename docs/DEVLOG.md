@@ -303,3 +303,15 @@ Claude Code recorded the intro and the hover frame by frame in Chrome on Windows
 - **Vercel.** A Vercel project, stayabove, builds it from the repo.
 - **Protection setting.** The new project came with Vercel Authentication on every URL except custom domains, which would have put the public site behind a Vercel login. It was switched to standard protection: the public domain is open, and preview builds stay private.
 
+## 20. Feedback: the hover effect overshot
+
+My first look at the live site found a problem: with the cursor near the top-right buttons, "Import" slid into the theme toggle. Each magnetic element could lean toward the cursor by about a third of the distance, which is up to about 15 px. Two neighbours 10 px apart leaned into each other.
+
+The fix:
+- Each lean is capped at 6% of the element's short side, which is 1.5 to 3 px.
+- The tank swell went from 34% to 16%, and labels grow half as much as their tanks.
+- The row lifts went from 3 px to 2 px.
+- The button clusters got 12 px gaps.
+
+An automated sweep moved the cursor around every magnetic element and checked every pair for overlap. The result: no overlaps; the largest lean is 2.4 px; the tightest pair keeps 7.4 px of space, where before they touched.
+
