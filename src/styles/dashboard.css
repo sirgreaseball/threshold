@@ -1,10 +1,10 @@
-/* Planner. Same tokens as the landing page; an app, so it never rubber-bands. */
-html:has(.planner),
-.planner {
+/* Dashboard. Same tokens as the landing page; an app, so it never rubber-bands. */
+html:has(.dashboard),
+.dashboard {
   overscroll-behavior: none;
 }
 
-.planner {
+.dashboard {
   min-height: 100dvh;
 }
 
@@ -842,7 +842,7 @@ html:has(.planner),
   pointer-events: none;
 }
 
-/* A file dragged anywhere over the planner. */
+/* A file dragged anywhere over the dashboard. */
 .is-dragging::after {
   content: 'Drop to import your report';
   position: fixed;
@@ -1061,8 +1061,7 @@ html:has(.planner),
   gap: 8px;
 }
 
-.check,
-.radio {
+.check {
   display: flex;
   align-items: flex-start;
   gap: 10px;
@@ -1071,8 +1070,7 @@ html:has(.planner),
   cursor: pointer;
 }
 
-.check input,
-.radio input {
+.check input {
   flex: none;
   width: 18px;
   height: 18px;
@@ -1089,14 +1087,18 @@ html:has(.planner),
 
 .review__item {
   display: grid;
-  grid-template-columns: 18px minmax(0, 1fr) auto auto;
-  gap: 4px 12px;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  grid-template-areas:
+    'box name name'
+    '. parts pct';
+  gap: 2px 12px;
   align-items: center;
   padding: 8px 0;
   border-bottom: 1px solid var(--hair);
 }
 
 .review__item input[type='checkbox'] {
+  grid-area: box;
   width: 18px;
   height: 18px;
   margin: 0;
@@ -1104,14 +1106,19 @@ html:has(.planner),
 }
 
 .review__name {
+  grid-area: name;
   min-width: 0;
-  height: 36px;
-  padding: 0 10px;
+  min-height: 36px;
+  padding: 7px 10px;
   border: 0;
   border-radius: 10px;
   background: transparent;
+  font: inherit;
   font-size: 15px;
   font-weight: 500;
+  line-height: 22px;
+  resize: none;
+  overflow: hidden;
 }
 
 .review__name:focus {
@@ -1120,27 +1127,21 @@ html:has(.planner),
 }
 
 .review__parts {
+  grid-area: parts;
+  padding-left: 10px;
   font-size: 12px;
   color: var(--muted);
-  white-space: nowrap;
 }
 
 .review__pct {
+  grid-area: pct;
   font-size: 13px;
+  text-align: right;
 }
 
-.review__mode {
-  display: grid;
-  gap: 8px;
-  margin: 4px 0 0;
-  padding: 0;
-  border: 0;
-}
-
-.review__mode legend {
-  margin-bottom: 8px;
-  font-size: 13px;
-  color: var(--muted);
+/* A course that does not add up to the percentage printed on the report. */
+.review__pct[data-match='no'] {
+  color: var(--danger);
 }
 
 /* Rule sheet */
@@ -1383,31 +1384,6 @@ html:has(.planner),
 
   .term__end input {
     flex: 1 1 180px;
-  }
-
-  .review__item {
-    grid-template-columns: 18px minmax(0, 1fr) auto;
-    grid-template-areas:
-      'box name pct'
-      '. parts parts';
-  }
-
-  .review__item input[type='checkbox'] {
-    grid-area: box;
-  }
-
-  .review__name {
-    grid-area: name;
-  }
-
-  .review__parts {
-    grid-area: parts;
-    white-space: normal;
-    padding-left: 10px;
-  }
-
-  .review__pct {
-    grid-area: pct;
   }
 
   .courses__foot .link--danger {

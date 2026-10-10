@@ -1,11 +1,11 @@
 import './styles/base.css';
-import './styles/app.css';
+import './styles/dashboard.css';
 
 import gsap from 'gsap';
 import { Skyline } from './skyline.js';
 import { evaluate, shortName, KINDS, parseDate, isoDate, daysBetween, startOfDay, weeklyFromCredits, sumParts, slack } from './plan.js';
 import { percent } from './core.js';
-import { load, save, sample, uid, cleanState, cleanCourse, takePending, STORAGE_KEY } from './store.js';
+import { blank, sample, uid, cleanState, cleanCourse, takePending, forgetSaved } from './store.js';
 import { readReportFile, readReportText, ReportError } from './report.js';
 import { fillIcons } from './icons.js';
 import { bindThemeToggle } from './theme.js';
@@ -20,7 +20,10 @@ fillIcons(document);
 bindThemeToggle($('#theme-btn'));
 magnetize();
 
-let state = load();
+// Held in memory only: nothing is saved, and a reload starts empty. The landing
+// page passes its minimum along in the address (?min=80).
+forgetSaved();
+let state = cleanState({ ...blank(), rule: { min: Number(new URLSearchParams(location.search).get('min')) } });
 let views = new Map();
 const rows = new Map(); // course id -> { el, parts: Map(part id -> el), shownPct }
 
@@ -48,15 +51,20 @@ const els = {
 };
 
 /* ---------- Words and numbers ---------- */
-// Truncated, never rounded up: 79.96% must not read as 80.0%.
-const fmt = (p) => (p == null ? '' : `${(Math.floor(p * 10 + 1e-9) / 10).toFixed(1)}%`);
+// Two decimals, rounded the way reports print them, except that nothing is ever
+// rounded up onto a whole number: 79.996% reads 79.99%, never 80.00%.
+const fmt = (p) => {
+  if (p == null) return '';
+  let r = Math.round(p * 100) / 100;
+  if (r % 1 === 0 && r > p) r = Math.floor(p * 100) / 100;
+  return `${r.toFixed(2)}%`;
+};
 const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const niceDate = (iso) => {
   const d = parseDate(iso);
   return d ? `${d.getDate()} ${MONTHS[d.getMonth()]}` : '';
 };
-const norm = (s) => s.toUpperCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 const find = (id) => state.courses.find((c) => c.id === id);
 
 /** Where a course stands today, in plain words. Only shown when it matters. */
@@ -68,25 +76,31 @@ function nowText(v) {
   return { text: '', tone: '' };
 }
 
-function leftFor(v) {
-  return v.mode === 'separate' ? (v.parts.find((p) => p.kind === v.endKind)?.judge.left ?? v.left) : v.left;
-}
-
 /**
  * The three numbers people asked for: classes still to come, how many of
  * them must be attended, and how many can be skipped, to finish at or above
- * the minimum. Must attend + can skip = classes left.
+ * the minimum. Must attend + can skip = classes left. In separate mode they
+ * are sums over the course's parts.
+ *
+ * Without an estimate of the classes to come, they say what the minimum
+ * allows today: how many can be missed now, or how many it takes to get back.
  */
 function stats(v) {
-  const blank = { text: '', tone: '' };
+  const none = { text: '\u2014', tone: 'muted' };
   if (v.plan.total == null) {
-    return { left: { text: v.plan.reason === 'no-end' || v.plan.reason === 'no-start' ? 'Add dates' : 'Pick an estimate', tone: 'muted' }, attend: blank, skip: blank, note: '' };
+    const left = { text: v.plan.reason === 'no-end' || v.plan.reason === 'no-start' ? 'Add dates' : 'Pick an estimate', tone: 'muted' };
+    if (v.status === 'empty') return { left, attend: none, skip: none, note: '' };
+    if (v.status === 'below') {
+      return { left, attend: { text: Number.isFinite(v.need) ? `Next ${v.need}` : 'All', tone: 'danger' }, skip: { text: '0', tone: 'danger' }, note: '' };
+    }
+    return { left, attend: none, skip: { text: `${v.miss} now`, tone: v.miss ? 'good' : 'edge' }, note: '' };
   }
-  const left = leftFor(v);
+  const left = v.left;
   const e = v.end;
   if (!left) return { left: { text: '0', tone: 'muted' }, attend: { text: '0', tone: 'muted' }, skip: { text: '0', tone: 'muted' }, note: '' };
   if (!e.reachable) {
-    return { left: { text: String(left), tone: '' }, attend: { text: `All ${left}`, tone: 'danger' }, skip: { text: '0', tone: 'danger' }, note: `Best case ${fmt(e.best)}` };
+    const best = v.mode === 'separate' && v.endKind ? `${v.endKind} best case` : 'Best case';
+    return { left: { text: String(left), tone: '' }, attend: { text: `All ${left}`, tone: 'danger' }, skip: { text: '0', tone: 'danger' }, note: `${best} ${fmt(e.best)}` };
   }
   const skip = e.maxSkip;
   return {
@@ -100,7 +114,11 @@ function stats(v) {
 /** One line for tooltips and screen readers: "22 left: attend 12, skip up to 10". */
 function statsLine(v) {
   const s = stats(v);
-  if (v.plan.total == null) return s.left.text;
+  if (v.plan.total == null) {
+    if (v.status === 'empty') return 'No classes yet';
+    if (v.status === 'below') return Number.isFinite(v.need) ? `Attend the next ${v.need} in a row to get back to ${v.min}%` : `Cannot get back to ${v.min}%`;
+    return v.miss ? `Can miss ${v.miss} now and stay at ${v.min}%` : 'No classes to spare right now';
+  }
   if (s.left.text === '0') return 'No classes left';
   if (s.note) return `${s.left.text} left: attend all of them. ${s.note}`;
   if (s.skip.text === '0') return `${s.left.text} left: attend all of them`;
@@ -227,7 +245,8 @@ function paintSummary(intro) {
   } else {
     const below = counted.filter(({ v }) => v.status === 'below');
     if (below.length) {
-      lede = below.length === 1 && counted.length > 1 ? `${below[0].c.name} is below ${minText}.` : `${below.length} of ${plural(counted.length, 'course')} ${below.length === 1 ? 'is' : 'are'} below ${minText}.`;
+      const which = (x) => (x.v.mode === 'separate' ? `${x.c.name} (${x.v.worstKind.toLowerCase()})` : x.c.name);
+      lede = below.length === 1 && counted.length > 1 ? `${which(below[0])} is below ${minText}.` : `${below.length} of ${plural(counted.length, 'course')} ${below.length === 1 ? 'is' : 'are'} below ${minText}.`;
     } else {
       lede = counted.length === 1 ? `${counted[0].c.name} is at or above ${minText}.` : `All ${counted.length} courses are at or above ${minText}.`;
     }
@@ -235,7 +254,7 @@ function paintSummary(intro) {
     const room = ({ v }) => (v.end ? (v.end.reachable ? v.end.maxSkip : -1e6 + v.end.best) : slack(v));
     const tight = counted.reduce((w, x) => (room(x) < room(w) ? x : w));
     const tv = tight.v;
-    const tl = leftFor(tv);
+    const tl = tv.left;
     if (tv.end && !tv.end.reachable) sub = `${tight.c.name} can no longer reach ${tv.min}% this semester. Best case ${fmt(tv.end.best)}.`;
     else if (tv.end && tl) {
       sub =
@@ -244,7 +263,7 @@ function paintSummary(intro) {
           : `Least room: ${tight.c.name}. Of its ${tl} remaining classes you can skip ${tv.end.maxSkip}.`;
     } else if (tv.status === 'below') {
       sub = Number.isFinite(tv.need)
-        ? `${tight.c.name} needs the next ${plural(tv.need, 'class', 'classes')} in a row to get back above ${tv.min}%.`
+        ? `${tight.c.name} needs the next ${plural(tv.need, 'class', 'classes')} in a row to get back to ${tv.min}%.`
         : `${tight.c.name} can no longer reach ${tv.min}%.`;
     }
     else sub = `Least room right now: ${tight.c.name}.`;
@@ -593,7 +612,6 @@ function commit(change, message) {
   const before = structuredClone(state);
   change();
   state = cleanState(state);
-  save(state);
   if (message) {
     undoSnap = before;
     showToast(message);
@@ -617,7 +635,6 @@ $('.toast__undo', els.toast).addEventListener('click', () => {
   const snap = undoSnap;
   hideToast();
   state = cleanState(snap);
-  save(state);
   paintAll();
 });
 
@@ -735,7 +752,8 @@ $('#empty-add').addEventListener('click', addCourse);
 
 function loadSample() {
   const had = state.courses.length > 0;
-  commit(() => (state = sample()), had ? 'Replaced your courses with the sample' : 'Loaded a sample semester');
+  // The sample brings its own courses and dates, not its own minimum.
+  commit(() => (state = { ...sample(), rule: state.rule }), had ? 'Replaced your courses with the sample' : 'Loaded a sample semester');
   rows.forEach((r) => r.el.remove());
   rows.clear();
   paintAll({ intro: true });
@@ -847,7 +865,7 @@ function importError(msg) {
   $('#import-error').textContent = msg;
 }
 
-/** welcome: the first visit, straight from "Open planner" on the landing page. */
+/** welcome: the first visit, straight from the landing page. */
 function openImport(mode = 'import') {
   const welcome = mode === 'welcome';
   $('#import-title').textContent = welcome ? 'Import your attendance report?' : 'Import your report';
@@ -892,7 +910,16 @@ $('#paste-go').addEventListener('click', () => {
 function review(report) {
   pending = report;
   const n = report.courses.length;
-  $('#review-lede').textContent = `Found ${plural(n, 'course')} with ${plural(report.courses.reduce((s, c) => s + c.parts.length, 0), 'row')} of classes.`;
+  // c.check: whether a course adds up to the percentage printed on the report (table.js).
+  const printed = report.courses.filter((c) => c.check);
+  const off = printed.filter((c) => !c.check.ok).length;
+  let lede = `Found ${plural(n, 'course')} with ${plural(report.courses.reduce((s, c) => s + c.parts.length, 0), 'row')} of classes.`;
+  if (printed.length) {
+    lede += off
+      ? ` ${off === 1 ? 'One percentage does' : `${off} percentages do`} not match the report. Check the classes below.`
+      : ' Every percentage matches the report.';
+  }
+  $('#review-lede').textContent = lede;
   const facts = $('#review-facts');
   facts.replaceChildren();
   if (report.rule) {
@@ -908,20 +935,25 @@ function review(report) {
       const li = document.createElement('li');
       li.className = 'review__item';
       const { attended, conducted } = sumParts(c.parts);
-      li.innerHTML = `<input type="checkbox" checked data-i="${i}" /><input class="review__name" data-i="${i}" maxlength="60" /><span class="review__parts"></span><span class="review__pct num"></span>`;
+      li.innerHTML = `<input type="checkbox" checked data-i="${i}" /><textarea class="review__name" data-i="${i}" maxlength="60" rows="1" spellcheck="false"></textarea><span class="review__parts"></span><span class="review__pct num"></span>`;
       li.children[0].setAttribute('aria-label', `Import ${c.name}`);
       li.children[1].value = c.name;
       li.children[1].setAttribute('aria-label', 'Course name');
       li.children[2].textContent = c.parts.map((p) => `${p.kind} ${p.attended}/${p.conducted}`).join(' · ');
-      li.children[3].textContent = fmt(percent(attended, conducted));
+      const pct = li.children[3];
+      pct.textContent = fmt(percent(attended, conducted));
+      if (c.check) {
+        pct.dataset.match = c.check.ok ? 'yes' : 'no';
+        if (!c.check.ok) pct.textContent += ` (report ${c.check.printed})`;
+      }
       return li;
     }),
   );
-  $('#review-mode').hidden = !state.courses.length;
   updateReviewButton();
   $('#import-title').textContent = 'Check your courses';
   $('#import-lede').hidden = true;
   step('review');
+  $$('.review__name', list).forEach(fitName);
   if (!reduce) gsap.from($$('.review__item', list), { y: 10, opacity: 0, duration: 0.6, ease: 'expo.out', stagger: 0.03 });
 }
 
@@ -940,6 +972,19 @@ function updateReviewButton() {
   go.textContent = n ? `Import ${plural(n, 'course')}` : 'Pick a course';
 }
 $('#review-list').addEventListener('change', updateReviewButton);
+
+// A long course name wraps onto a second line instead of being cut off.
+function fitName(ta) {
+  ta.style.height = 'auto';
+  ta.style.height = `${ta.scrollHeight}px`;
+}
+$('#review-list').addEventListener('input', (e) => e.target.matches('.review__name') && fitName(e.target));
+$('#review-list').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && e.target.matches('.review__name')) {
+    e.preventDefault();
+    e.target.blur();
+  }
+});
 $('#review-back').addEventListener('click', () => step('pick'));
 
 $('#review-go').addEventListener('click', () => {
@@ -949,48 +994,26 @@ $('#review-go').addEventListener('click', () => {
     .filter((li) => li.children[0].checked)
     .map((li) => {
       const i = Number(li.children[0].dataset.i);
-      const name = li.children[1].value.trim() || report.courses[i].name;
+      const name = li.children[1].value.replace(/\s+/g, ' ').trim() || report.courses[i].name;
       return { ...report.courses[i], name };
     });
   const useRule = $('input[name="use-rule"]', els.importDlg)?.checked;
   const useDates = $('input[name="use-dates"]', els.importDlg)?.checked;
-  const replace = !state.courses.length || $('input[name="merge"]:checked', els.importDlg)?.value === 'replace';
+  // An import replaces everything the dashboard held, dates included, so
+  // nothing from an earlier report carries over; Undo brings it all back.
   commit(() => {
     if (useRule && report.rule) state.rule.min = report.rule;
-    if (useDates) {
-      if (report.start) state.term.start = report.start;
-      if (report.asOf) state.term.asOf = report.asOf;
-    }
-    const incoming = chosen.map((c) => cleanCourse({ id: uid(), name: c.name, parts: c.parts.map((p) => ({ ...p, id: uid() })) }));
-    if (replace) {
-      state.courses = incoming;
-      return;
-    }
-    for (const inc of incoming) {
-      const old = state.courses.find((c) => norm(c.name) === norm(inc.name));
-      if (!old) {
-        state.courses.push(inc);
-        continue;
-      }
-      for (const p of inc.parts) {
-        const q = old.parts.find((x) => x.kind === p.kind);
-        if (q) {
-          q.attended = p.attended;
-          q.conducted = p.conducted;
-        } else old.parts.push(p);
-      }
-    }
+    state.term = { start: (useDates && report.start) || '', end: '', asOf: (useDates && report.asOf) || '' };
+    state.courses = chosen.map((c) => cleanCourse({ id: uid(), name: c.name, credits: c.credits, parts: c.parts.map((p) => ({ ...p, id: uid() })) }));
   }, `Imported ${plural(chosen.length, 'course')}`);
   pending = null;
   closeSheet(els.importDlg);
-  if (replace) {
-    rows.forEach((r) => r.el.remove());
-    rows.clear();
-  }
+  rows.forEach((r) => r.el.remove());
+  rows.clear();
   paintAll({ intro: true });
 });
 
-/* Drop a file anywhere on the planner. */
+/* Drop a file anywhere on the dashboard. */
 let dragDepth = 0;
 const hasFiles = (e) => [...(e.dataTransfer?.types || [])].includes('Files');
 addEventListener('dragenter', (e) => {
@@ -1037,14 +1060,7 @@ if (handed && handed.courses?.length) {
   openSheet(els.importDlg);
 } else if (arrived === '#import') openImport();
 else if (arrived === '#start' && !state.courses.length) {
-  // Coming from "Open planner" with nothing saved yet: offer the import first.
+  // Coming from the landing page: offer the import first.
   setTimeout(() => openImport('welcome'), reduce ? 0 : 450);
 }
-
-// Other tabs: pick up their changes.
-addEventListener('storage', (e) => {
-  if (e.key !== STORAGE_KEY) return;
-  state = load();
-  paintAll();
-});
 

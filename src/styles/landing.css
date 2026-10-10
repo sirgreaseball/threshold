@@ -382,11 +382,13 @@
 
 .hero__cta {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 28px;
+  gap: 14px 28px;
 }
 
 .hero__link {
+  white-space: nowrap;
   font-size: 15px;
   font-weight: 500;
   text-decoration: underline;
@@ -983,7 +985,7 @@
   }
 
   .hero__cta {
-    gap: 20px;
+    gap: 14px 20px;
   }
 
   /* Start the copy below the readout, which sits top right on phones and ends

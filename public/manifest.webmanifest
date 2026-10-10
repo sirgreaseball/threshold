@@ -2,7 +2,7 @@
   "name": "Threshold",
   "short_name": "Threshold",
   "description": "How many classes can you miss before your college's minimum? Threshold works it out for every course.",
-  "start_url": "/app/",
+  "start_url": "/dashboard/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#f1f1ee",

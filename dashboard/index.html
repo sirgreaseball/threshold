@@ -19,9 +19,9 @@
         document.documentElement.dataset.theme = t || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
       })();
     </script>
-    <script type="module" src="/src/app.js"></script>
+    <script type="module" src="/src/dashboard.js"></script>
   </head>
-  <body class="planner">
+  <body class="dashboard">
     <header class="bar">
       <a class="wordmark bar__mark" href="/" data-magnet="0.18"><svg class="wordmark__mark" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><clipPath id="tm-clip"><rect width="64" height="64" rx="15"/></clipPath><g clip-path="url(#tm-clip)"><rect width="64" height="64" fill="#101113"/><path fill="#2e33f0" d="M0 25.5C10 21 21 21 32 24.8S54 28.6 64 24.4V64H0Z"/><rect y="38" width="64" height="5.5" fill="#f4f4f2"/></g></svg><span>Threshold</span></a>
       <div class="bar__right">
@@ -111,8 +111,8 @@
         <button type="button" class="btn btn--ghost btn--icon btn--sm" data-close aria-label="Close" data-magnet="0.3"><i data-icon="x"></i></button>
       </div>
       <p class="sheet__lede" id="import-lede" hidden>
-        Drop the attendance PDF from your college portal and Threshold sets up every course, its theory and practical
-        classes and your college's minimum. Or close this and add courses by hand.
+        Drop the attendance PDF from your college portal and Threshold sets up every course, its theory, practical
+        and tutorial classes, and your college's minimum. Or close this and add courses by hand.
       </p>
 
       <div class="import" data-step="pick">
@@ -120,7 +120,7 @@
           <button type="button" class="drop" id="import-drop" data-spot>
             <span class="drop__icon" data-magnet="0.4"><i data-icon="file"></i></span>
             <span class="drop__title">Drop the PDF here</span>
-            <span class="drop__body">Or browse for it. Attendance reports with theory and practical rows work best.</span>
+            <span class="drop__body">Or browse for it. Any school's report works: theory, practical, tutorial and studio rows.</span>
             <span class="btn btn--sm drop__btn">Browse files</span>
           </button>
           <details class="paste">
@@ -130,7 +130,7 @@
             <button type="button" class="btn btn--sm" id="paste-go">Read the text</button>
           </details>
           <p class="import__error" id="import-error" role="alert"></p>
-          <p class="import__privacy">Read on this device. Your name and ID numbers on the report are ignored and never saved.</p>
+          <p class="import__privacy">Read on this device, never uploaded and never saved: close the tab and it is gone. Your name and ID numbers are ignored.</p>
         </div>
       </div>
 
@@ -146,11 +146,6 @@
           <p class="review__lede" id="review-lede"></p>
           <div class="review__facts" id="review-facts"></div>
           <ul class="review__list" id="review-list"></ul>
-          <fieldset class="review__mode" id="review-mode" hidden>
-            <legend>Your planner already has courses</legend>
-            <label class="radio"><input type="radio" name="merge" value="merge" checked /><span>Update matching courses and add new ones</span></label>
-            <label class="radio"><input type="radio" name="merge" value="replace" /><span>Replace all my courses</span></label>
-          </fieldset>
         </div>
         <div class="sheet__foot">
           <button type="button" class="btn btn--ghost btn--sm" id="review-back">Back</button>

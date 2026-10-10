@@ -1,10 +1,8 @@
-// Saved state, in this browser only. Version 2 holds courses made of parts.
-// Version 1 (single subjects) is migrated on first load.
+// The dashboard's state and the checks that keep it sound. Courses are made of
+// parts (theory, practical, tutorial, studio), each with its own counts.
 
 import { KINDS, PLAN_MODES, isoDate } from './plan.js';
 
-const KEY = 'threshold.v2';
-const OLD_KEY = 'threshold.v1';
 const PENDING = 'threshold.pending';
 
 export const blank = () => ({
@@ -62,49 +60,26 @@ export function cleanState(s) {
   };
 }
 
-function read(key) {
+/**
+ * Nothing is kept between visits: the dashboard holds its courses in memory
+ * and a reload starts empty. Versions before 2.0 saved them in this browser;
+ * that copy is deleted on sight.
+ */
+export function forgetSaved() {
   try {
-    return JSON.parse(localStorage.getItem(key));
+    localStorage.removeItem('threshold.v2');
+    localStorage.removeItem('threshold.v1');
   } catch {
-    return null;
+    // Storage blocked: there is nothing to delete.
   }
 }
 
-export function load() {
-  const v2 = read(KEY);
-  if (v2 && Array.isArray(v2.courses)) return cleanState(v2);
-  const v1 = read(OLD_KEY);
-  if (v1 && Array.isArray(v1.subjects)) {
-    return cleanState({
-      rule: { min: v1.target },
-      term: { end: v1.semEnd },
-      courses: v1.subjects.map((s) => ({
-        id: s.id,
-        name: s.name,
-        plan: s.perWeek > 0 ? 'weekly' : 'auto',
-        parts: [{ kind: 'Theory', attended: s.attended, conducted: s.conducted, perWeek: s.perWeek }],
-      })),
-    });
-  }
-  return blank();
-}
-
-export function save(state) {
-  try {
-    localStorage.setItem(KEY, JSON.stringify(state));
-  } catch {
-    // Private mode or storage full: the planner still works for this visit.
-  }
-}
-
-export const STORAGE_KEY = KEY;
-
-/** The landing page hands a parsed report to the planner through the session. */
+/** The landing page hands a parsed report to the dashboard through the session; it is deleted as soon as it is read. */
 export function setPending(report) {
   try {
     sessionStorage.setItem(PENDING, JSON.stringify(report));
   } catch {
-    // Without session storage the planner opens with an empty import dialog instead.
+    // Without session storage the dashboard opens with an empty import dialog instead.
   }
 }
 

@@ -1,4 +1,4 @@
-// The planner's summary: one liquid tank per course on a shared scale, with
+// The dashboard's summary: one liquid tank per course on a shared scale, with
 // the college minimum as a dashed line across all of them. Each tank has its
 // own small height field, so a tap or a logged class makes its surface ripple.
 //
