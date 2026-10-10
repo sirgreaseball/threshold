@@ -28,6 +28,13 @@ Each release has a git tag (`v1.2.0` and so on).
 
 ---
 
+## [2.0.1] - 2026-10-10
+
+### Fixed
+- The old address `/app/`, which the 1.x buttons and installed web apps used, gave a 404 instead of opening the dashboard. `/app`, `/app/` and everything under them now redirect to `/dashboard/`, keeping `?min=` and any `#` link.
+
+Commit: `779aeeb`. Dev log: [section 24](docs/DEVLOG.md#24-feedback-every-schools-report-logic-that-holds-nothing-kept), "After the release".
+
 ## [2.0.0] - 2026-10-10
 
 Any school's report, and nothing kept.
@@ -167,6 +174,7 @@ Rounds 1 and 2 were built before the repository existed. The first commit, `6199
 
   Dev log: sections 1 to 9.
 
+[2.0.1]: https://github.com/sirgreaseball/threshold/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/sirgreaseball/threshold/compare/v1.2.1...v2.0.0
 [1.2.1]: https://github.com/sirgreaseball/threshold/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/sirgreaseball/threshold/compare/v1.1.0...v1.2.0

@@ -473,3 +473,11 @@ The repository:
 - It is now public, at my request. It is still all rights reserved: the README's license section and `package.json` say so, and being able to read the code does not grant a license to use it.
 - The only collaborator is still me. Every commit is mine, with no co-author lines.
 - The real reports used for testing are not in the repository. Every fixture is made up.
+
+**After the release (2.0.1).** Checking the live site after the push:
+- `/app` and `/app/index.html` redirected to the dashboard, but the bare `/app/` gave a 404. That is the address the 1.x buttons and the installed web app used. Vercel's `/app/:path*` pattern does not match an empty last segment.
+- The fix is a plain pattern, `/app/(.*)` to `/dashboard/$1`.
+- Checked live:
+  - `/app`, `/app/`, `/app/?min=80` and `/app/index.html` all return 308 to `/dashboard/`, with the query kept;
+  - a browser opening `/app/#start` lands on the dashboard with the import prompt open;
+  - the full headless run (import, every minimum, separate mode, reload, paste, sample, hand-off) passed on the live site with no errors.
