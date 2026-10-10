@@ -89,7 +89,6 @@ function writeCopy() {
   const t2 = t1 + k2;
   const last = TL.seq[TL.seq.length - 1];
   const classes = (x) => `${count(x)} ${x === 1 ? 'class' : 'classes'}`;
-  const skip30 = Math.max(0, forecast(a0, t0, P, 30).maxSkip);
   setStory('P%', `${P}%`);
   setStory(
     'beatA',
@@ -99,16 +98,6 @@ function writeCopy() {
   setStory(
     'beatC',
     `${n <= 20 ? Word(n) : n} ${n === 1 ? 'class' : 'classes'} later it is back ${exact ? `at exactly ${P}%` : `above ${P}%, at ${fmt(percent(last.a, last.t))}`}. Threshold does this sum for every course you take, every time your attendance changes.`,
-  );
-  setStory('k1', String(k1));
-  setStory('n', String(n));
-  setStory('skip30', String(skip30));
-  // The three answers, told with the same example course.
-  setStory('q1', `Right now, without dropping below the line. With ${a0} of ${t0} attended and a ${P}% minimum, the example can miss ${k1} more.`);
-  setStory('q2', `Once you are below it: how many classes you must attend in a row. At ${a0} of ${t2} the example needs ${n}.`);
-  setStory(
-    'q3',
-    `Tell it when classes end. It counts the classes still to come and how many of them you can skip. From ${a0} of ${t0}, with 30 classes left, the example can skip ${skip30} and still finish at ${P}%.`,
   );
   buildTrack();
 }
@@ -254,18 +243,40 @@ if (reduce) {
 }
 
 // Beat copy rises up through the water and comes to rest at its anchor (scrubbed).
+const mm = gsap.matchMedia();
 if (!reduce) {
   $$('.beat:not(.beat--hero)').forEach((beat) => {
     const copy = $('.beat__copy', beat);
     gsap.fromTo(copy, { y: 80 }, { y: 0, ease: 'none', scrollTrigger: { trigger: beat, start: 'top bottom', end: 'top top', scrub: true } });
     gsap.fromTo(copy, { autoAlpha: 0 }, { autoAlpha: 1, ease: 'none', scrollTrigger: { trigger: beat, start: 'top bottom', end: 'top 75%', scrub: true } });
   });
-  gsap.to('.hero__title, .hero__below', {
-    y: -120,
-    ease: 'none',
-    scrollTrigger: { trigger: '.beat--hero', start: 'top top', end: 'bottom top', scrub: true },
+  mm.add('(min-width: 768px)', () => {
+    gsap.to('.hero__title, .hero__below', {
+      y: -120,
+      ease: 'none',
+      scrollTrigger: { trigger: '.beat--hero', start: 'top top', end: 'bottom top', scrub: true },
+    });
   });
 }
+// On phones the HUD sits top right, in the way of everything scrolling out. So the
+// hero and each beat's copy hold still at their anchor and dissolve there instead
+// of sliding up under it. Holding still is not motion, so reduced motion gets it too.
+mm.add('(max-width: 767px)', () => {
+  const hold = (targets, trigger, f) =>
+    gsap.fromTo(
+      targets,
+      { y: 0, autoAlpha: 1 },
+      {
+        y: () => innerHeight * f,
+        autoAlpha: 0,
+        ease: 'none',
+        immediateRender: false,
+        scrollTrigger: { trigger, start: 'top top', end: () => `top -${innerHeight * f}`, scrub: true, invalidateOnRefresh: true },
+      },
+    );
+  hold('.hero__title, .hero__below', '.beat--hero', 0.4);
+  $$('.beat:not(.beat--hero) .beat__copy').forEach((copy) => hold(copy, copy.closest('.beat'), 0.3));
+});
 
 /* ---------- The minimum picker ---------- */
 const rule = $('.rule');
@@ -345,8 +356,11 @@ ScrollTrigger.create({
   end: 'max',
   onUpdate: (self) => {
     nav.classList.toggle('is-hidden', self.direction === 1 && self.scroll() > 120);
+    nav.classList.toggle('is-scrolled', self.scroll() > 24);
     if (self.scroll() > innerHeight * 0.6) setRuleOpen(false);
   },
+  // A reload part way down the page gets the bar straight away.
+  onRefresh: (self) => nav.classList.toggle('is-scrolled', self.scroll() > 24),
 });
 
 /* ---------- Split headings: lines rise as they enter, finished well before the middle ---------- */
@@ -447,12 +461,82 @@ async function handleReport(file) {
   }
 }
 
+/* ---------- The three questions, answered for whatever is in Try it ---------- */
+const plainClasses = (x) => `${x} ${x === 1 ? 'class' : 'classes'}`;
+function setQ(key, text, animate) {
+  for (const el of $$(`[data-q="${key}"]`)) {
+    if (el.textContent === text) continue;
+    el.textContent = text;
+    // The big figures roll up into place when they change.
+    if (animate && !reduce && key.startsWith('f')) gsap.fromTo(el, { y: 18, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: 'expo.out', overwrite: 'auto' });
+  }
+}
+
+let questionsShown = false;
+function updateQuestions(a, t, p, left) {
+  const animate = questionsShown;
+  questionsShown = true;
+  const st = status(a, t, p);
+  const k = st === 'safe' || st === 'edge' ? canMiss(a, t, p) : 0;
+  // 1. How many can I miss?
+  if (st === 'empty') setQ('q1', 'Put in how many classes were held to see this.', animate);
+  else if (st === 'below') setQ('q1', `At ${a} of ${t} you are already below ${p}%, so there is nothing to spare. The next answer is the way back.`, animate);
+  else if (st === 'edge') setQ('q1', `At ${a} of ${t} you are right on the line for ${p}%. Missing even one more class takes you below it.`, animate);
+  else setQ('q1', `With ${a} of ${t} attended and ${/^8/.test(p) ? 'an' : 'a'} ${p}% minimum, you can miss ${k} more before you drop below the line.`, animate);
+  setQ('f1', String(k), animate);
+  setQ('c1', k === 1 ? 'class to spare' : 'classes to spare', animate);
+
+  // 2. How do I get back above the line?
+  if (st === 'below') {
+    const n = mustAttend(a, t, p);
+    setQ('q2', n === 1 ? `At ${a} of ${t}, the next class you attend takes you back to ${p}%.` : `At ${a} of ${t} you need ${n} classes in a row, without a single miss, to get back to ${p}%.`, animate);
+    setQ('f2', String(n), animate);
+    setQ('c2', n === 1 ? 'class to get back' : 'in a row', animate);
+  } else if (st === 'empty') {
+    setQ('q2', 'Put in how many classes were held to see this.', animate);
+    setQ('f2', '0', animate);
+    setQ('c2', 'in a row', animate);
+  } else {
+    // Missing twice what you can spare shows how much more the way back costs.
+    const over = Math.max(1, 2 * k);
+    const m = mustAttend(a, t + over, p);
+    const back = m === 1 ? 'the next class' : `${m} classes in a row`;
+    setQ(
+      'q2',
+      k ? `You are above the line now. Miss ${over}, twice what you can spare, and you would need ${back} to get back.` : `You are right on the line. Miss even one and you would need ${back} to get back.`,
+      animate,
+    );
+    setQ('f2', String(m), animate);
+    setQ('c2', `${m === 1 ? 'class to get back' : 'in a row'}, after missing ${over}`, animate);
+  }
+
+  // 3. Will I end the semester above it?
+  const f = forecast(a, t, p, left);
+  if (!left) {
+    setQ('q3', t ? `With no classes left, you finish at ${fmt(percent(a, t))}.` : 'Put in how many classes are still to come this semester.', animate);
+    setQ('f3', '0', animate);
+    setQ('c3', 'classes still to come', animate);
+  } else if (!f.reachable) {
+    setQ('q3', `Even attending all ${left} classes still to come, you would finish at ${fmt(f.best)}, short of ${p}%.`, animate);
+    setQ('f3', '0', animate);
+    setQ('c3', `of the ${left} still to come you can skip`, animate);
+  } else {
+    const skip = f.maxSkip;
+    const verdict =
+      skip === left ? `you could skip all ${left} and still finish at ${p}% or above` : skip === 0 ? `you must attend every one of them to finish at ${p}%` : `you can skip ${skip} of them and still finish at ${p}% or above`;
+    setQ('q3', `With ${plainClasses(left)} still to come, ${verdict}.`, animate);
+    setQ('f3', String(skip), animate);
+    setQ('c3', `of the ${left} still to come you can skip`, animate);
+  }
+}
+
 /* ---------- Try it: a live calculator in its own vessel ---------- */
 const vessel = new Liquid($('.vessel__canvas'), { range: [40, 100], level: 38, spacing: 7, target: P });
 vessel.setLevel(null, { instant: true }); // empty until it scrolls into view
 invertText(vessel, $$('.vessel [data-invert]'));
 const tryA = $('#try-a');
 const tryT = $('#try-t');
+const tryL = $('#try-l');
 const trySeg = $('#try-seg');
 const read = {
   pre: $$('.vessel__pre'),
@@ -463,6 +547,8 @@ const read = {
 let tryLive = false;
 let tryTouched = false; // until someone edits the numbers, they follow the example course
 let lastBig = null;
+
+const getP = () => Number($('input[name="try-p"]:checked', trySeg)?.value || P);
 
 function syncTry() {
   if (!tryTouched) {
@@ -478,11 +564,11 @@ function syncTry() {
       return lab;
     }),
   );
+  // Before the vessel fills, a new minimum still re-answers the questions.
   if (tryLive) updateTry();
+  else updateQuestions(Number(tryA.value), Number(tryT.value), getP(), Number(tryL.value));
 }
 syncTry();
-
-const getP = () => Number($('input[name="try-p"]:checked', trySeg)?.value || P);
 
 function updateTry(fromField) {
   tryLive = true;
@@ -504,12 +590,13 @@ function updateTry(fromField) {
   }
   vessel.setTarget(p);
   vessel.setLevel(percent(a, t));
+  updateQuestions(a, t, p, Math.max(0, Math.floor(Number(tryL.value) || 0)));
 }
 
 $$('[data-step]').forEach((b) =>
   b.addEventListener('click', () => {
     const [field, d] = b.dataset.step.split(':');
-    const input = field === 'a' ? tryA : tryT;
+    const input = { a: tryA, t: tryT, l: tryL }[field];
     input.value = Math.max(0, (Number(input.value) || 0) + Number(d));
     tryTouched = true;
     updateTry(field);
@@ -523,6 +610,7 @@ tryT.addEventListener('input', () => {
   tryTouched = true;
   updateTry('t');
 });
+tryL.addEventListener('input', () => updateTry('l'));
 [tryA, tryT].forEach((el) => el.addEventListener('blur', () => updateTry(el === tryA ? 'a' : 't')));
 trySeg.addEventListener('change', () => updateTry());
 // Fill the vessel when it first scrolls into view.

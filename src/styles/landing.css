@@ -27,6 +27,25 @@
   transition: transform 0.8s var(--ease-out);
 }
 
+/* Once the page has moved, a frosted bar sits behind the nav, so the mark and
+   buttons never land on top of the headline or the water when it comes back. */
+.nav::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: color-mix(in srgb, var(--paper) 72%, transparent);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  backdrop-filter: blur(18px) saturate(160%);
+  border-bottom: 1px solid var(--hair);
+  opacity: 0;
+  transition: opacity 0.5s var(--ease-out);
+}
+
+.nav.is-scrolled::before {
+  opacity: 1;
+}
+
 /* Slides away while reading down, comes back on any scroll up. */
 .nav.is-hidden {
   transform: translateY(-110%);
@@ -393,14 +412,30 @@
   display: grid;
   gap: 20px;
   max-width: 620px;
+  margin-left: var(--shift, 0px);
 }
 
 .beat--b .beat__copy {
-  margin-left: 12vw;
+  --shift: 12vw;
 }
 
 .beat--c .beat__copy {
-  margin-left: 24vw;
+  --shift: 24vw;
+}
+
+/* The HUD is 240px wide on the right. Copy stops 40px short of it, so text never
+   scrolls underneath. Phones hold and dissolve the copy instead (landing.js). */
+@media (min-width: 768px) {
+  .beat__copy {
+    max-width: min(620px, calc(100vw - 2 * var(--gutter) - 280px - var(--shift, 0px)));
+  }
+}
+
+@media (max-width: 1023px) {
+  .beat--b .beat__copy,
+  .beat--c .beat__copy {
+    --shift: 0px;
+  }
 }
 
 .beat h2 {
@@ -951,14 +986,10 @@
     gap: 20px;
   }
 
-  /* Start the copy below the readout, which sits top right on phones. */
+  /* Start the copy below the readout, which sits top right on phones and ends
+     about 300px down (less than 34svh on tall phones, more on short ones). */
   .beat {
-    padding-top: 34svh;
-  }
-
-  .beat--b .beat__copy,
-  .beat--c .beat__copy {
-    margin: 0;
+    padding-top: max(34svh, calc(300px + env(safe-area-inset-top, 0px)));
   }
 
   .q {

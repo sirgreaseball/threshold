@@ -127,6 +127,14 @@
               <button type="button" class="btn btn--ghost btn--icon" data-step="t:1" aria-label="One more held"><i data-icon="plus"></i></button>
             </div>
           </div>
+          <div class="field">
+            <label for="try-l">Still to come this semester</label>
+            <div class="stepper">
+              <button type="button" class="btn btn--ghost btn--icon" data-step="l:-1" aria-label="One fewer still to come"><i data-icon="minus"></i></button>
+              <input id="try-l" class="num" type="number" inputmode="numeric" min="0" value="30" />
+              <button type="button" class="btn btn--ghost btn--icon" data-step="l:1" aria-label="One more still to come"><i data-icon="plus"></i></button>
+            </div>
+          </div>
           <fieldset class="field">
             <legend>Minimum</legend>
             <div class="seg" id="try-seg"></div>
@@ -146,22 +154,22 @@
 
       <section class="qs" aria-labelledby="qs-title">
         <h2 class="qs__title" id="qs-title" data-split>Three questions it answers for every course.</h2>
-        <p class="qs__lede">Here are the answers for the example course from the top of the page.</p>
+        <p class="qs__lede">Answered for the numbers in Try it, above. Change them and these answers change too.</p>
         <ol class="qs__list">
           <li class="q">
             <h3 class="q__ask" data-split>How many classes can I miss?</h3>
-            <p class="q__body" data-story="q1">Right now, without dropping below the line. With 32 of 38 attended and a 75% minimum, the example can miss 4 more.</p>
-            <p class="q__fig"><span class="q__mask"><span class="num" data-story="k1">4</span></span><span>classes to spare</span></p>
+            <p class="q__body" data-q="q1">With 32 of 38 attended and a 75% minimum, you can miss 4 more before you drop below the line.</p>
+            <p class="q__fig"><span class="q__mask"><span class="num" data-q="f1">4</span></span><span data-q="c1">classes to spare</span></p>
           </li>
           <li class="q">
             <h3 class="q__ask" data-split>How do I get back above the line?</h3>
-            <p class="q__body" data-story="q2">Once you are below it: how many classes you must attend in a row. At 32 of 46 the example needs 10.</p>
-            <p class="q__fig"><span class="q__mask"><span class="num" data-story="n">10</span></span><span>in a row</span></p>
+            <p class="q__body" data-q="q2">You are above the line now. Miss 8, twice what you can spare, and you would need 10 classes in a row to get back.</p>
+            <p class="q__fig"><span class="q__mask"><span class="num" data-q="f2">10</span></span><span data-q="c2">in a row, after missing 8</span></p>
           </li>
           <li class="q">
             <h3 class="q__ask" data-split>Will I end the semester above it?</h3>
-            <p class="q__body" data-story="q3">Tell it when classes end. It counts the classes still to come and how many of them you can skip. From 32 of 38, with 30 classes left, the example can skip 11 and still finish at 75%.</p>
-            <p class="q__fig"><span class="q__mask"><span class="num" data-story="skip30">11</span></span><span>of the last 30 you can skip</span></p>
+            <p class="q__body" data-q="q3">With 30 classes still to come, you can skip 11 of them and still finish at 75% or above.</p>
+            <p class="q__fig"><span class="q__mask"><span class="num" data-q="f3">11</span></span><span data-q="c3">of the 30 still to come you can skip</span></p>
           </li>
         </ol>
       </section>

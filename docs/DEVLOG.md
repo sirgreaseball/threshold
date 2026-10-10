@@ -313,7 +313,7 @@ The fix:
 - The row lifts went from 3 px to 2 px.
 - The button clusters got 12 px gaps.
 
-An automated sweep moved the cursor around every magnetic element and checked every pair for overlap.
+An automated sweep moved the cursor around every magnetic element and checked every pair for overlap. The result: no overlaps; the largest lean is 2.4 px; the tightest pair keeps 7.4 px of space, where before they touched.
 
 ## 21. Feedback: make the splash page make sense
 
@@ -324,5 +324,37 @@ What changed:
 - **Readout wording.** "4 classes to spare", "No classes to spare", "Attend the next 10 in a row", "Back at 75%".
 - **The story copy introduces the example.** "Take one course: 32 of 38 classes attended, 84.2%..." Every number is generated for whichever minimum is chosen.
 - **"Try it on one course" moved up** to sit right after the story. Its numbers start from the example course until you edit them.
-- **The three questions now answer for that same example**, with the numbers in the sentence. For instance, "From 32 of 38, with 30 classes left, the example can skip 11 and still finish at 75%". The third question became "Will I end the semester above it?" The result: no overlaps; the largest lean is 2.4 px; the tightest pair keeps 7.4 px of space, where before they touched.
+- **The three questions now answer for that same example**, with the numbers in the sentence. For instance, "From 32 of 38, with 30 classes left, the example can skip 11 and still finish at 75%". The third question became "Will I end the semester above it?"
 
+## 22. Feedback: answers that follow your numbers, and a nav that stays readable
+
+The note: the three answers still used the example course, not what was typed into Try it. And after scrolling down and back up, the returning nav's logo sat on top of the headline and was hard to see.
+
+What changed:
+- **Try it has a third number, "Still to come this semester" (30 by default).**
+  - The three questions are now answered for whatever is in Try it. They update on every keystroke, stepper click or change of minimum.
+  - They say how many classes you can miss, how many in a row you would need, and how many of the classes still to come you can skip. Below the line, the second one is the way back. Above it, it is what missing twice your spare would cost.
+  - Each answer covers its edge cases: right on the line, below it, a finish that is out of reach, and no classes left.
+  - A changed figure rolls up into place. That animation uses y and opacity, so it never fights the scroll-scrubbed yPercent reveal on the same element.
+- **Question 2's scenario changed** from "miss one more than you can spare" to "miss twice what you can spare". With live numbers, missing one too many nearly always costs only one class to recover ("you would need the next class"), which says little. Twice the spare shows how much more the way back costs. Missing 8 means 10 in a row at 75%, and 13 at 80%.
+- **The nav gets a frosted bar once the page has scrolled 24 px.**
+  - The bar is the paper colour at 72%, with an 18 px backdrop blur and a hairline border.
+  - It fades in over 0.5 s, and it also appears after a reload part way down the page.
+  - At the very top the nav stays transparent, as before.
+  - The planner's bar was already frosted, so both pages now match.
+- **Text no longer scrolls under the HUD.** While checking the nav, a sweep found the same kind of problem at the HUD. On phones, tablets and small laptops (up to about 1180 px wide), the hero and the story copy slid up underneath the fixed readout.
+  - From 768 px wide, the copy stops 40 px short of the HUD, which is 240 px wide. Its width is capped with a calc, and tablets drop the stagger of the second and third beats.
+  - On phones, the hero and each beat's copy hold still at their anchor and dissolve there, rather than sliding up under the readout. The beat padding keeps the anchor below the HUD on short phones too: 300 px, or 34svh if that is more. Holding still is not motion, so reduced motion gets this as well.
+  - Screens 1366 px and wider are unchanged.
+
+Verification:
+- 19 tests pass.
+- A headless check typed into Try it and switched the minimum. Every answer matched the maths for:
+  - the example at 75% and 80%;
+  - a course below the line (20 of 44);
+  - 60 classes to come;
+  - a safe course;
+  - stepper clicks.
+- Zero console errors.
+- An overlap sweep ran at 19 scroll positions on 7 screen sizes, from 360x640 to 1440x900. It found zero text-over-HUD collisions.
+- The landing regression and the hover sweep still pass, with 0 overlaps and a largest lean of 2.4 px.
