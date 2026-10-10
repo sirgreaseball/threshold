@@ -1,39 +1,290 @@
+<div align="center">
+
+<img src="public/favicon.svg" width="84" height="84" alt="Threshold logo: cobalt water under a white line on an ink tile">
+
 # Threshold
 
-Attendance planner for colleges with a minimum attendance rule (75%, 80%, 85% or anything else). For every course it tells you:
-- how many classes you can miss right now,
-- how many you must attend in a row to get back above the line,
-- what is still possible before the last class.
+**Stay above the line.**
 
-Drop in the attendance report PDF from your college portal and it reads the courses, their theory and practical rows, and the minimum. Everything runs in the browser, and nothing is uploaded.
+See how many classes you can miss in every course,<br>under whatever attendance rule your college runs.
 
-Live at **https://stayabove.vercel.app**.
+[**stayabove.vercel.app**](https://stayabove.vercel.app) &nbsp;·&nbsp; [Open the planner](https://stayabove.vercel.app/app/) &nbsp;·&nbsp; [Dev log](docs/DEVLOG.md) &nbsp;·&nbsp; [Changelog](CHANGELOG.md)
 
-Built with Claude Code for the "Playing with AI" project. The full process log is in [docs/DEVLOG.md](docs/DEVLOG.md).
+<br>
 
-## Run
+![Live](https://img.shields.io/badge/live-stayabove.vercel.app-2e33f0?style=flat-square)
+![JavaScript](https://img.shields.io/badge/JavaScript-vanilla-101113?style=flat-square&logo=javascript&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-6-101113?style=flat-square&logo=vite&logoColor=white)
+![GSAP](https://img.shields.io/badge/GSAP-3.15-101113?style=flat-square)
+![pdf.js](https://img.shields.io/badge/pdf.js-4.10-101113?style=flat-square)
+![Backend](https://img.shields.io/badge/backend-none-101113?style=flat-square)
+
+</div>
+
+<br>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/media/hero-dark.png">
+  <img src="docs/media/hero-light.png" alt="The Threshold landing page. The headline 'Stay above the line.' sits half under cobalt water, and an example course at 84.2% with 4 classes to spare sits in the corner.">
+</picture>
+
+<br>
+
+Most Indian colleges stop you from sitting end-semester exams if your attendance drops below a minimum. That minimum is usually 75%, and sometimes 80% or 85%. So every student ends up doing the same sum in their head before skipping a class, and the usual formula for it is often wrong.
+
+Threshold works it out for you, for every course you take. Drop in the attendance PDF from your college portal and it sets everything up. Your data never leaves your browser.
+
+<br>
+
+## Three answers, for every course
+
+| | Question | What Threshold says |
+|:-:|---|---|
+| **1** | How many classes can I miss? | The exact number you can still skip without dropping below the line. |
+| **2** | How do I get back above it? | How many classes in a row you must attend, without a miss, to climb back. |
+| **3** | Will I end the semester above it? | Of the classes still to come, how many you can skip and still finish at the minimum. |
+
+> **Example.** 32 of 38 classes attended, with a 75% minimum. You can miss **4** more: 32 of 42 is 76.2%, but 32 of 43 is 74.4%. Miss 8 instead and you would need **10** classes in a row to get back. With 30 classes still to come, you can skip **11** of them and still finish at 75%.
+
+<br>
+
+## The maths, in whole numbers
+
+The variables are:
+- $a$: classes attended;
+- $t$: classes held;
+- $p$: the minimum, as a whole percent (75, not 0.75);
+- $L$: classes still to come.
+
+```math
+\text{can miss} = \left\lfloor \frac{100a - p\,t}{p} \right\rfloor
+\qquad
+\text{in a row to recover} = \left\lceil \frac{p\,t - 100a}{100 - p} \right\rceil
+```
+
+```math
+\text{can skip of the } L \text{ still to come} = a + L - \left\lceil \frac{p\,(t + L)}{100} \right\rceil
+```
+
+Every calculation stays in integers. Writing the minimum as `75` rather than `0.75` makes `100 * a` and `p * t` exact, so floating point never gets a say.
+
+That matters more than you would think. The textbook decimal formula gives the wrong answer in **2,614 of 3,320 cases** at an 80% minimum (every case up to 80 classes), because `1 - 0.8` is `0.19999999999999996` in floating point. For example, with 3 of 5 attended it says you must attend 6 in a row. The real answer is 5.
+
+<details>
+<summary><b>Where the decimal formula breaks, by minimum</b></summary>
+
+<br>
+
+| Minimum | Wrong answers out of 3,320 |
+|:-:|:-:|
+| 60% | 47 |
+| 65% | 196 |
+| 70% | 0 |
+| 75% | 0 |
+| 80% | **2,614** |
+| 85% | 22 |
+
+At 75% it happens to be right, which is why most online calculators look fine until your college asks for 80%. `tests/core.test.js` checks every function against a brute-force count for 8 minimums and every case up to 80 classes.
+
+</details>
+
+<br>
+
+## Bring your own report
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/media/import-dark.png">
+  <img src="docs/media/import-light.png" alt="The import prompt: 'Import your attendance report?' with a drop zone for the PDF, a Browse files button and a link to paste the table instead.">
+</picture>
+
+Drop in the attendance PDF from your college portal, or paste the table, and Threshold builds the semester for you. It reads every course, its theory and practical rows, your college's minimum and the semester dates.
+
+```mermaid
+flowchart LR
+  A["Attendance PDF<br/>or a pasted table"] --> B["pdf.js pulls the text<br/>in your browser"]
+  B --> C["Typed rows<br/>THEO · PRAC · TUT · STUDIO"]
+  B --> D["Plain lines<br/>name, held, attended"]
+  C --> E{"Whichever pass<br/>finds more rows"}
+  D --> E
+  E --> F["Review step<br/>fix anything"]
+  F --> G["Your courses<br/>saved in this browser"]
+```
+
+- **Typed rows** handle SAP-style reports, such as the NMIMS one. Each record is anchored on its type word and the two counts after it. The course name is cut where the division name repeats it.
+- **Plain lines** handle everything else, including tab- or comma-separated pastes from a spreadsheet. Held is always the larger count, so the column order never matters.
+- **pdf.js loads only when you import**, in its legacy build for older phones, with `isEvalSupported: false` so nothing inside a PDF is ever compiled. Names and ID numbers on the report are ignored and never saved.
+
+<br>
+
+## Built for any college, any course
+
+- **Any minimum.** Pick 60 to 90% in one tap, or type anything from 1 to 100.
+- **Theory and practical, together or apart.** Count every class against one minimum, as NMIMS does. Or judge each type separately, with its own lab minimum. Any course can override the college rule.
+- **Courses made of parts:** theory, practical, tutorial and studio, each with its own counts.
+- **Four ways to know how many classes are left:**
+  - **Pace so far** (the default): classes held ÷ weeks elapsed × weeks left.
+  - **Credits:** uses the AICTE definition, where 1 credit is 1 lecture hour or 2 lab hours a week. Each lab part takes one credit and theory gets the rest. A 3-credit course with a lab comes out at 2 lecture hours and 2 lab hours a week, about 60 classes over a 15-week semester.
+  - **Per week:** you set the number for each part.
+  - **Planned total:** taken from the course's session plan.
+
+<br>
+
+## The planner
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/media/planner-dark.png">
+  <img src="docs/media/planner-light.png" alt="The planner with a sample semester. The headline reads 'Distributed Computing is below 75%.' Above the course table, a row of liquid tanks shows each course against a dashed 75% line, with the one course below the line in red.">
+</picture>
+
+- **The headline is the one thing to know right now:** which course is below the line, or which has the least room.
+- **One tank per course**, on a shared scale with your minimum as a dashed line. Tanks near the cursor swell like a dock, and the water reaches toward the pointer.
+- **Every row shows** classes left, how many you must attend and how many you can skip, without opening it.
+- **Log a class in one tap**, Present or Absent for each part, with an undo after every change.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/media/course-dark.png">
+  <img src="docs/media/course-light.png" alt="One course opened: Operating Systems with theory 26 of 33 and practical 20 of 22. It has Present and Absent buttons, a choice of how to count the rest of the semester, and a per-course minimum.">
+</picture>
+
+<br>
+
+## The landing page tells the story
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/media/story-dark.png">
+  <img src="docs/media/story-light.png" alt="Mid-scroll on the landing page. 'Keep skipping and you sink fast.' The example course has fallen to 69.5%, the water is below a red dashed line, and the readout says to attend the next 10 in a row.">
+</picture>
+
+As you scroll, an example course skips classes. The water sinks, the line turns red, and then the course climbs back. The readout in the corner doubles as a progress bar, with one mark per class. Every number in the story is generated for whichever minimum you choose, so the copy is true at 70% just as it is at 85%. `tests/story.test.js` checks this for every minimum from 50% to 95%.
+
+Then you try it on one of your own courses. The vessel fills to your attendance as you type, and the three answers below follow every number.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/media/answers-dark.png">
+  <img src="docs/media/answers-light.png" alt="'Try it on one course' with 34 attended, 40 held, 45 still to come and an 80% minimum. The vessel reads 'You can miss 2 more classes', and the three answers below read 2 classes to spare, 6 in a row after missing 4, and 11 of the 45 still to come.">
+</picture>
+
+<br>
+
+## On your phone
+
+<img src="docs/media/phones.png" alt="Four phone screens: the landing hero, Try it, and the planner in light and dark.">
+
+The layout uses `svh` units, so mobile browser bars never crop it. Inputs are 16px, which stops iOS from zooming in. Sheets slide up from the bottom, and everything respects the safe areas. On a phone the readout sits in the top corner, so story text holds still at its anchor and dissolves there instead of sliding underneath. Hover effects only switch on for a real mouse.
+
+<br>
+
+## Design notes
+
+- **Nothing snaps.** The story is scrubbed to the scroll with GSAP ScrollTrigger on a Lenis smooth scroll, so it moves exactly as far as your finger does.
+- **Real liquid.** The water is a 1D height field of springs on a canvas. Ripples travel and settle, and the level sloshes a little when it changes. Text crossing the surface turns white where the water covers it, using two layers clipped by the wave.
+- **Cursor-aware, never pushy.** Buttons lean toward a nearby cursor by at most 3 px, so neighbours never touch. An automated sweep checks every pair for overlaps.
+- **The theme floods in.** Switching light and dark pours the new theme out from the toggle as a wobbling blob, using the View Transitions API.
+- **Reduced motion is respected:** the story stays readable without any of it.
+
+<br>
+
+## Under the hood
+
+| | |
+|---|---|
+| **Build** | Vite 6, two pages (landing and planner), vanilla JavaScript, no framework |
+| **Motion** | GSAP 3.15 (ScrollTrigger, SplitText), Lenis 1.3 |
+| **Graphics** | Canvas 2D: height-field liquid, the tank chart, text inversion |
+| **PDF** | pdfjs-dist 4.10, legacy build, lazy-loaded |
+| **Type and icons** | Geist and Geist Mono via Fontsource, Phosphor icons inlined as SVG |
+| **Storage** | `localStorage`, nothing else |
+| **Hosting** | Vercel, deploys on every push to `main` |
+
+**Weight:** the landing page ships about 73 kB of gzipped JavaScript, and the planner about 49 kB. pdf.js (123 kB gzipped) loads only when someone imports a report.
+
+<details>
+<summary><b>Project layout</b></summary>
+
+```
+threshold/
+├── index.html              landing page
+├── app/index.html          the planner
+├── src/
+│   ├── core.js             attendance maths, whole numbers only
+│   ├── plan.js             courses, parts, rules, dates, classes left, credits
+│   ├── parse.js            the report parser (typed rows and plain lines)
+│   ├── report.js           reading a file or a paste, shared by both pages
+│   ├── pdftext.js          pdf.js text extraction, loaded on demand
+│   ├── story.js            the landing story, worked out for any minimum
+│   ├── landing.js          landing page: scroll story, Try it, the three answers
+│   ├── app.js              the planner
+│   ├── liquid.js           canvas liquid and text inversion
+│   ├── skyline.js          the planner's tank chart
+│   ├── magnet.js           cursor-aware details
+│   ├── theme.js            light and dark, with the flood transition
+│   ├── store.js            saving, migration from v1, the sample semester
+│   ├── icons.js            Phosphor icons
+│   └── styles/             base.css, landing.css, app.css
+├── tests/                  node:test suites for core, parse, plan and story
+├── public/                 icons, web manifest, social card
+├── docs/
+│   ├── DEVLOG.md           the full build log
+│   └── media/              README images
+└── CHANGELOG.md            what changed in each release
+```
+
+</details>
+
+<br>
+
+## Run it locally
+
+You need Node 18 or newer.
 
 ```bash
 npm install
-npm run dev      # http://localhost:5173
-npm test         # maths, report parser, planning and story checks
-npm run build    # static site in dist/
+npm run dev        # http://localhost:5173
+npm test           # 19 tests: maths, parser, planning, story
+npm run build      # static site in dist/
+npm run preview    # serve the build
 ```
 
-## Layout
+The tests cover these areas:
+- **core:** every function against a brute-force count, plus the edge cases: no classes yet, exactly on the line, a 100% minimum, and attended above held.
+- **parse:** a synthetic SAP-style report and spreadsheet pastes in any column order. They also check every way a minimum gets phrased, course names, and junk input.
+- **plan:** credits to weekly classes, all four ways of counting classes left, combined and separate rules, course overrides and dates.
+- **story:** the landing story is true for every minimum from 50% to 95%.
 
-- `index.html`, `src/landing.js`, `src/story.js`: the landing page and its scroll story, worked out for any minimum
-- `app/index.html`, `src/app.js`, `src/skyline.js`: the planner and its per-course tank chart
-- `src/core.js`: attendance maths, in whole numbers
-- `src/plan.js`: courses made of parts, college rules, classes left from pace, credits, weekly counts or planned totals
-- `src/parse.js`, `src/report.js`, `src/pdftext.js`: reading reports (pdf.js loads only when a PDF is imported)
-- `src/liquid.js`: the canvas liquid and the text-inversion effect
-- `src/theme.js`: light and dark themes, with the flood transition from the toggle
-- `src/store.js`: saving to this browser, migration from v1, and the sample semester
+<br>
 
-## How classes left are estimated
+## Privacy
 
-1. **Pace so far** (default): classes held ÷ weeks elapsed × weeks left.
-2. **Credits:** uses the AICTE definition, where 1 credit = 1 lecture hour or 2 lab hours a week. Each lab part takes one credit and theory gets the rest. A 3-credit course with a lab comes out at 2 lecture hours and 2 lab hours a week, about 60 classes over a 15-week semester.
-3. **Per week:** set for each part.
-4. **Planned total:** from the course's session plan.
+- No accounts, no server, no analytics, no cookies.
+- Your courses live in this browser's `localStorage` under `threshold.v2`, and the theme under `threshold.theme`.
+- A report dropped on the landing page reaches the planner through `sessionStorage` (`threshold.pending`), which is removed as soon as it is read.
+- PDFs are read on your device and never uploaded. Names and ID numbers on them are ignored.
+
+<br>
+
+## How it was made
+
+Threshold was built on 10 October 2026 for the Coursera project *Playing with AI*, working with Claude Code as the AI pair programmer. It came together over several rounds of feedback:
+
+| Round | What landed |
+|---|---|
+| **1** | The liquid landing page, text that inverts under the water, whole-number maths, a simple planner |
+| **2** | Courses made of parts, any minimum, credits, PDF and paste import, the tank chart, the theme flood, phones |
+| **3** | Live on Vercel, the logo, the import prompt, cursor-aware details, rows that show attend and skip at a glance |
+| **After launch** | Subtler hover, a landing page that explains itself, answers that follow your numbers, a frosted nav, text kept clear of the readout |
+
+Every decision, bug and fix is written up in **[docs/DEVLOG.md](docs/DEVLOG.md)**, and each release is in **[CHANGELOG.md](CHANGELOG.md)**.
+
+<br>
+
+## License
+
+© 2026 Dhruv Sonar. All rights reserved.
+
+This code is not open source. You may not copy, modify or redistribute it without written permission.
+
+<br>
+
+<div align="center">
+<sub>Your data stays in the browser, nothing uploaded.</sub>
+</div>
