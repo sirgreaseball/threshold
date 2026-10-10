@@ -11,11 +11,26 @@
 
 const KIND = {
   THEORY: 'Theory', THEO: 'Theory', TH: 'Theory', LECTURE: 'Theory', LECT: 'Theory', LEC: 'Theory',
-  PRACTICAL: 'Practical', PRAC: 'Practical', PR: 'Practical', LAB: 'Practical',
-  TUTORIAL: 'Tutorial', TUT: 'Tutorial',
-  STUDIO: 'Studio',
+  PRACTICAL: 'Practical', PRAC: 'Practical', PRACT: 'Practical', PRCT: 'Practical', PR: 'Practical', LAB: 'Practical', LABS: 'Practical',
+  TUTORIAL: 'Tutorial', TUT: 'Tutorial', TUTL: 'Tutorial', TUTO: 'Tutorial',
+  STUDIO: 'Studio', STDO: 'Studio', STUD: 'Studio',
 };
 const KIND_WORDS = Object.keys(KIND).join('|');
+
+/**
+ * The kind of class a report's type label names: "THEO", "TUTL", "Embedded
+ * Lab", "Seminar", "Moot court". The first word it knows decides; anything
+ * else ("Core", "Program Elective") counts as theory.
+ */
+export function kindOf(raw) {
+  for (const w of String(raw || '').toUpperCase().split(/[^A-Z]+/)) {
+    if (KIND[w]) return KIND[w];
+    if (w === 'P') return 'Practical';
+    if (/^(PRAC|LABORAT|PROJ|WORKSHOP|FIELD|CLINIC|MOOT|INTERN)/.test(w)) return 'Practical';
+    if (/^(TUTOR|SEMINAR)/.test(w)) return 'Tutorial';
+  }
+  return 'Theory';
+}
 const TYPED_ROW = new RegExp(`\\b(${KIND_WORDS})\\b[\\s:|,-]*(\\d{1,3})[\\s|,;]+(\\d{1,3})(?![\\d.])`, 'gi');
 
 const HEADER_BITS = [
@@ -57,7 +72,7 @@ function typedRows(flat) {
     if (!name) continue;
     const x = Number(m[2]);
     const y = Number(m[3]);
-    rows.push({ name, kind: KIND[m[1].toUpperCase()], attended: Math.min(x, y), conducted: Math.max(x, y) });
+    rows.push({ name, kind: kindOf(m[1]), attended: Math.min(x, y), conducted: Math.max(x, y) });
   }
   return rows;
 }
@@ -179,22 +194,47 @@ function findRule(flat) {
   return null;
 }
 
+// A date the way reports print one: 06.07.2026, 6/7/26, 2026-07-06, 6 Jul 2026, 06-Jul-2026, July 6, 2026.
+const MONTH = 'jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec';
+const DATE = `(?:\\d{1,2}[./-]\\d{1,2}[./-]\\d{2,4}|\\d{4}-\\d{1,2}-\\d{1,2}|\\d{1,2}(?:st|nd|rd|th)?[\\s./-]*(?:${MONTH})[a-z]*\\.?[\\s,./-]*\\d{4}|(?:${MONTH})[a-z]*\\.?\\s+\\d{1,2}(?:st|nd|rd|th)?,?\\s+\\d{4})`;
+
+function toIso(s) {
+  let d;
+  let m;
+  let y;
+  let g;
+  if ((g = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/))) [, y, m, d] = g.map(Number);
+  else if ((g = s.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})$/))) {
+    [, d, m, y] = g.map(Number);
+    if (m > 12 && d <= 12) [d, m] = [m, d]; // month first
+  } else {
+    const month = s.toLowerCase().match(new RegExp(MONTH));
+    const nums = s.match(/\d+/g) || [];
+    if (!month || nums.length < 2) return null;
+    m = MONTH.split('|').indexOf(month[0]) + 1;
+    d = Number(nums[0]);
+    y = Number(nums.at(-1));
+  }
+  if (y < 100) y += 2000;
+  const date = new Date(y, m - 1, d);
+  if (date.getMonth() !== m - 1 || date.getDate() !== d) return null;
+  return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+}
+
 function findDates(flat) {
-  const d = '(\\d{1,2})[./-](\\d{1,2})[./-](\\d{4})';
-  const m = flat.match(new RegExp(`from\\s*:?\\s*${d}\\s*(?:to|-|till|until)\\s*:?\\s*${d}`, 'i'));
+  const range = (lead) => flat.match(new RegExp(`${lead}(${DATE})\\s*(?:to|till|until|-|–)\\s*:?\\s*(${DATE})`, 'i'));
+  const m = range('from\\s*:?\\s*') || range('');
   if (!m) return { start: null, asOf: null };
-  const iso = (dd, mm, yy) => {
-    const date = new Date(Number(yy), Number(mm) - 1, Number(dd));
-    if (date.getMonth() !== Number(mm) - 1) return null;
-    return `${yy}-${String(mm).padStart(2, '0')}-${String(dd).padStart(2, '0')}`;
-  };
-  return { start: iso(m[1], m[2], m[3]), asOf: iso(m[4], m[5], m[6]) };
+  return { start: toIso(m[1].trim()), asOf: toIso(m[2].trim()) };
 }
 
 const SMALL = new Set(['and', 'of', 'in', 'for', 'the', 'to', 'with', 'on', 'a', 'an', 'at', 'by', 'or']);
-const ACRONYM = new Set(['AI', 'ML', 'OS', 'IT', 'IOT', 'UI', 'UX', 'AR', 'VR', 'XR', 'DBMS', 'OOP', 'OOPS', 'HCI', 'NLP', 'DSA', 'CAD', 'CAM', 'VLSI', 'DSP', 'EVS', 'GIS', 'API', 'SQL', 'HR', 'CSR', 'II', 'III', 'IV', 'VI', 'VII', 'VIII', 'IX', 'XI', 'XII']);
+const ACRONYM = new Set(['AI', 'ML', 'OS', 'IT', 'IOT', 'UI', 'UX', 'AR', 'VR', 'XR', 'DBMS', 'OOP', 'OOPS', 'HCI', 'NLP', 'DSA', 'CAD', 'CAM', 'VLSI', 'DSP', 'EVS', 'GIS', 'API', 'SQL', 'HR', 'CSR', 'IPR', 'IPC', 'CPC', 'ADR', 'GST', 'ESG', 'FDI', 'WTO', 'UN', 'EU', 'UK', 'USA', 'IFRS', 'GAAP', 'ERP', 'CRM', 'SCM', 'MIS', 'IB', 'II', 'III', 'IV', 'VI', 'VII', 'VIII', 'IX', 'XI', 'XII']);
 
-/** "COMPUTER NETWORKS" -> "Computer Networks", keeping acronyms ("AI") and small words. */
+// Each run of letters gets a capital: "SOCIO-LEGAL" -> "Socio-Legal", "B.COM" -> "B.Com", "WOMEN'S" -> "Women's".
+const capitalise = (w) => w.toLowerCase().replace(/\p{L}[\p{L}'’]*/gu, (run) => run[0].toUpperCase() + run.slice(1));
+
+/** "COMPUTER NETWORKS" -> "Computer Networks", keeping acronyms ("AI", "(IPC)") and small words. */
 export function titleCase(s) {
   const shouting = s === s.toUpperCase();
   return s
@@ -204,8 +244,10 @@ export function titleCase(s) {
       const bare = w.replace(/[^\p{L}\p{N}]/gu, '');
       if (ACRONYM.has(bare.toUpperCase())) return w.toUpperCase();
       if (!shouting) return w;
+      // Short and bracketed, or with no vowel at all, it is an abbreviation: "(BNS)", "CRPC".
+      if (/^\(\p{Lu}{2,6}\)\W*$/u.test(w) || /^[B-DF-HJ-NP-TV-XZ]{2,5}$/.test(bare)) return w;
       if (i > 0 && SMALL.has(bare.toLowerCase())) return w.toLowerCase();
-      return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+      return capitalise(w);
     })
     .join(' ');
 }
