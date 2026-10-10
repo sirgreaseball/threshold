@@ -180,7 +180,7 @@ const sky = new Skyline($('#sky-canvas'), {
   onDraw: (s) => {
     for (const b of els.skyLabels.children) {
       const label = b.firstElementChild;
-      const k = s.scaleOf(label.dataset.id);
+      const k = 1 + (s.scaleOf(label.dataset.id) - 1) * 0.5;
       const v = k.toFixed(3);
       if (label.dataset.k !== v) {
         label.dataset.k = v;

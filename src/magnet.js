@@ -42,14 +42,24 @@ export function magnetize() {
       const cy = r.top + r.height / 2 - (parseFloat(el.style.getPropertyValue('--my')) || 0);
       const dx = px - cx;
       const dy = py - cy;
-      const reach = Math.max(r.width, r.height) / 2 + 56;
+      const reach = Math.max(r.width, r.height) / 2 + 36;
       const d = Math.hypot(dx, dy);
       if (d < reach) {
         const k = (Number(el.dataset.magnet) || 0.3) * (1 - 0.35 * (d / reach) ** 2);
-        s.x(dx * k);
-        s.y(dy * k);
-        si?.x(dx * k * 0.45);
-        si?.y(dy * k * 0.45);
+        // A lean, not a chase: never more than a few pixels (6% of the short side,
+        // 1.5 to 3 px), so neighbours a normal gap apart keep clear air between them.
+        const cap = Math.max(1.5, Math.min(3, Math.min(r.width, r.height) * 0.06));
+        let mx = dx * k;
+        let my = dy * k;
+        const len = Math.hypot(mx, my);
+        if (len > cap) {
+          mx *= cap / len;
+          my *= cap / len;
+        }
+        s.x(mx);
+        s.y(my);
+        si?.x(mx * 0.5);
+        si?.y(my * 0.5);
         s.on = true;
       } else if (s.on) {
         s.x(0);

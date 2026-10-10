@@ -201,7 +201,7 @@ button,
 
 @media (hover: hover) and (pointer: fine) {
   .wordmark:hover .wordmark__mark {
-    transform: rotate(-8deg) scale(1.06);
+    transform: rotate(-4deg) scale(1.03);
   }
 }
 

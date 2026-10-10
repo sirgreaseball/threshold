@@ -246,7 +246,7 @@ export class Skyline {
     const reach = this.slot * 0.95;
     for (const t of this.tanks.values()) {
       // Swell toward the cursor (Gaussian falloff across neighbouring tanks).
-      const want = near ? 1 + 0.34 * Math.exp(-(((this.px - t.cx) / reach) ** 2)) : 1;
+      const want = near ? 1 + 0.16 * Math.exp(-(((this.px - t.cx) / reach) ** 2)) : 1;
       t.s += (want - t.s) * (1 - Math.exp(-dt * 11));
       if (Math.abs(want - t.s) < 0.001) t.s = want;
       this.place(t);
@@ -263,7 +263,7 @@ export class Skyline {
         const vertical = Math.exp(-(((this.py - surfaceY) / 110) ** 2));
         lift = (i) => {
           const colX = t.x + ((i + 0.5) / n) * t.w;
-          return -10 * vertical * Math.exp(-(((colX - this.px) / (t.w * 0.5)) ** 2));
+          return -6 * vertical * Math.exp(-(((colX - this.px) / (t.w * 0.5)) ** 2));
         };
       }
       for (let s = 0; s < steps; s++) {
@@ -309,7 +309,7 @@ export class Skyline {
       ctx.save();
       roundRect(ctx, t.x, top, t.w, h - top + r, r);
       ctx.fillStyle = colors.track;
-      ctx.globalAlpha = hot ? 1 : 0.55 + 0.45 * Math.min(1, (t.s - 1) / 0.34);
+      ctx.globalAlpha = hot ? 1 : 0.55 + 0.45 * Math.min(1, (t.s - 1) / 0.16);
       ctx.fill();
       ctx.globalAlpha = 1;
       ctx.clip();
@@ -365,7 +365,7 @@ export class Skyline {
       ctx.restore();
       // Label the line where there is room beside the last tank.
       const last = this.tanks.get(this.order.at(-1));
-      const gap = last ? w - (last.cx + (last.bw * 1.34) / 2) : 0;
+      const gap = last ? w - (last.cx + (last.bw * 1.16) / 2) : 0;
       if (gap >= 30) {
         ctx.font = `500 11px ${this.font}`;
         ctx.fillStyle = colors.ink;

@@ -43,7 +43,7 @@
 .nav__right {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
 /* Text inversion: the original (top) layer and the paper-coloured copy. */

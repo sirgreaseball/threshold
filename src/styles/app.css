@@ -37,7 +37,7 @@ html:has(.planner),
 .bar__right {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
 .rule-pill {
@@ -319,11 +319,11 @@ html:has(.planner),
   }
 
   .row__sum:hover .meter {
-    transform: scaleY(2);
+    transform: scaleY(1.5);
   }
 
   .row__sum:hover .row__v {
-    transform: translateY(-3px);
+    transform: translateY(-2px);
   }
 
   .row__sum:hover .row__attend .row__v {
