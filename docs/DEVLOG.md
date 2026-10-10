@@ -483,3 +483,34 @@ The repository:
   - the full headless run (import, every minimum, separate mode, reload, paste, sample, hand-off) passed on the live site with no errors.
 
 **2.0.2.** The dashboard screenshot from the law import showed a tank labelled "BNS2": the short label took an initial from every word, the year 2023 included. A name that ends in its own bracketed abbreviation now uses it, so that course reads "IPC". A year gives no initial, and only a small number or a Roman numeral at the end stays whole ("Mathematics III" is still "M3"). Two new cases in the plan tests cover it; 29 tests pass.
+
+## 25. Feedback: "this is what I actually need"
+
+My next note was two screenshots: a table I had worked out for the same law report, next to the dashboard, which showed different numbers. My table had, for each course:
+- the target total classes for the semester: 60, 75 or 30;
+- the most classes I can miss;
+- the classes attended so far;
+- how many more I need to attend.
+
+What was different. Three inputs differed, and one of them was the dashboard's fault:
+1. **Total classes.** My table plans each course's semester at 15 classes a credit. The report does not say how many classes a course has, so the dashboard estimated it from the pace so far and an end date it assumed, 16 weeks after the start. Classes had run slower than planned, so the estimate came out about a fifth short of the plan. **This was the dashboard's fault, and it is fixed.**
+2. **The minimum.** My table lets a 60-class course miss 17, so it needs 43, about 72%. The report's rule is 80%: 48 needed, 12 can be missed. Even at 72%, 43 of 60 is 71.67%, below the line. The safe number is 44 needed, so 16 can be missed, not 17. Threshold always rounds the safe way.
+3. **Attended so far.** My table's attended counts were higher than the report's, which is dated 27 September. The dashboard can only use the counts in the file. A newer report, or an edit in the course, brings them up to date.
+
+What changed:
+- **Each course has a total.** It is the classes the course has this semester, all types together. The review step asks for it beside every course, with the estimate as a placeholder, and each course's drawer has it under "Total classes". With it, the classes left, must attend and can skip are exact, and the dates are not needed at all.
+- **What the college plans comes before an estimate.** The order is: a course's total classes, then its credits, then the pace so far, then classes a week. The drawer's chips show whichever one is in use.
+- **Credits plan a 15-week semester.** That is 15 classes a credit, or 30 in a lab: a 4-credit course with a tutorial comes out at 45 lectures and 15 tutorials, 60 in all. Credits used to stretch over the dates, so an assumed 15.6-week semester made the same course 62.
+- **The semester, spelled out the way people count it.** Classes left shows the total beside it, "22 of 60", or "of ~48" when it is an estimate. An opened course reads: "60 classes this semester. At 80% you need 48, so you can miss 12 in all. You have missed 7. Of the 22 left, attend 17 and you can skip 5." That is my table's columns in a sentence, worked out the safe way.
+- Rows show attended of held ("31 of 38 attended") beside the class types.
+- A row with no way to count the rest of the semester says "Add the total", the one input that always makes it exact.
+- The sample semester now goes by its credits. Its 2-credit studio became 1 credit, so that it stays believable at 30 classes.
+
+How it was checked:
+- **31 tests pass.** The new ones cover:
+  - a total that beats credits and the pace, and needs no dates;
+  - shares of the classes left that always add up, however they split;
+  - a made-up 60-class course counted the way students count it: 48 needed, 12 can be missed, 7 gone, of 22 left attend 17 and skip 5;
+  - 72% needing 44 of 60, never 43.
+- **The law report, imported with each course's total typed into the review,** at 80% and then 72%, on desktop and a phone. Every row matched a hand calculation, with no errors and no sideways scroll.
+- **The full headless run passed:** import, every minimum, separate mode, reload, paste and sample. The README screenshots were retaken.

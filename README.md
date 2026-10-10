@@ -119,6 +119,7 @@ flowchart LR
 - **Subjects, not class types.** The name comes from the course column. The type column (THEO, PRAC, TUTL, Lab, Seminar, Moot court…) only decides whether a row is theory, practical, tutorial or studio, and rows with the same course name become the parts of one course.
 - **Any table with a header.** Columns are known by their words: serial number, course or subject, code, type, held (conducted, delivered, total), attended (present), absent, percentage and credits. Absent-only columns, "23/27" fractions, separate theory and lab columns, merged course cells and totals rows are all handled.
 - **Checked against the report.** Most reports print each course's percentage. The review step says whether every course adds up to it, so a misread never goes unnoticed.
+- **Exact with one more number.** Reports rarely say how many classes a course has in all, so the review step asks for each course's total this semester. It is usually 15 a credit, so 60 for a 4-credit course. Left empty, it is estimated from your pace.
 - **A fallback for the rest.** Text with no header row goes to the text reader, which anchors on type words ("THEO 30 27") or reads plain "name, held, attended" lines in any column order.
 - **pdf.js loads only when you import**, in its legacy build for older phones, with `isEvalSupported: false` so nothing inside a PDF is ever compiled. Names and ID numbers on the report are ignored.
 
@@ -129,11 +130,11 @@ flowchart LR
 - **Any minimum.** Pick 60 to 90% in one tap, or type anything from 1 to 100.
 - **Theory and practical, together or apart.** Count every class against one minimum, as NMIMS does. Or judge each type separately, with its own lab minimum. Any course can override the college rule.
 - **Courses made of parts:** theory, practical, tutorial and studio, each with its own counts.
-- **Four ways to know how many classes are left:**
-  - **Pace so far** (the default): classes held ÷ weeks elapsed × weeks left.
-  - **Credits:** uses the AICTE definition, where 1 credit is 1 lecture hour or 2 lab hours a week. Each lab part takes one credit and theory gets the rest. A 3-credit course with a lab comes out at 2 lecture hours and 2 lab hours a week, about 60 classes over a 15-week semester.
+- **Four ways to know how many classes are left,** used in this order, since what the college plans beats an estimate:
+  - **Total classes:** the classes the course has this semester, all types together. The import asks for it.
+  - **Credits:** uses the AICTE definition, where 1 credit is 1 lecture hour or 2 lab hours a week, over a 15-week semester. That is 15 classes a credit, or 30 in a lab. Each lab or tutorial part takes one credit and theory gets the rest, so a 4-credit course with a tutorial comes out at 45 lectures and 15 tutorials, 60 in all.
+  - **Pace so far:** classes held ÷ weeks elapsed × weeks left. An estimate, and marked as one.
   - **Per week:** you set the number for each part.
-  - **Planned total:** taken from the course's session plan.
 
 <br>
 
@@ -149,6 +150,7 @@ flowchart LR
 - **The headline is the one thing to know right now:** which course is below the line, or which has the least room.
 - **One tank per course**, on a shared scale with your minimum as a dashed line. Tanks near the cursor swell like a dock, and the water reaches toward the pointer.
 - **Every row shows** classes left, how many you must attend and how many you can skip, without opening it. Change the minimum and every number follows.
+- **The whole semester, the way you count it.** Classes left sits beside the semester's total ("22 of 60", or "of ~48" when it is an estimate), and an opened course spells it out: *60 classes this semester. At 80% you need 48, so you can miss 12 in all. You have missed 7. Of the 22 left, attend 17 and you can skip 5.*
 - **No dates yet?** The rows still say what the minimum allows today: how many classes you can miss now, or how many in a row it takes to get back.
 - **Percentages to two decimals**, rounded the way reports print them, so 77.78% on the report is 77.78% here. Nothing is ever rounded up onto the line: 79.996% shows as 79.99%.
 - **Log a class in one tap**, Present or Absent for each part, with an undo after every change.
@@ -156,7 +158,7 @@ flowchart LR
 <p>
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/media/course-dark.png">
-  <img src="docs/media/course-light.png" alt="One course opened: Operating Systems with theory 26 of 33 and practical 20 of 22. It has Present and Absent buttons, a choice of how to count the rest of the semester, and a per-course minimum.">
+  <img src="docs/media/course-light.png" alt="One course opened: Operating Systems, 4 credits, with theory 26 of 33 and practical 20 of 22, and 20 of its 75 classes left. It has Present and Absent buttons, a choice of how to count the rest of the semester, the semester spelled out, and a per-course minimum.">
 </picture>
 </p>
 
@@ -260,7 +262,7 @@ You need Node 18 or newer.
 ```bash
 npm install
 npm run dev        # http://localhost:5173
-npm test           # 29 tests: maths, readers, planning, story
+npm test           # 31 tests: maths, readers, planning, story
 npm run build      # static site in dist/
 npm run preview    # serve the build
 ```
@@ -269,7 +271,7 @@ The tests cover these areas:
 - **core:** every function against a brute-force count, plus the edge cases: no classes yet, exactly on the line, a 100% minimum, and attended above held.
 - **parse:** the text reader on a synthetic SAP-style report and on spreadsheet pastes in any column order, every way a minimum gets phrased, course names, and junk input.
 - **table:** the position reader on synthetic reports: a stacked header repeated on page two, TUTL rows, wrapped names, a row split by the page break, footnotes, codes, absent columns, fractions, merged cells, totals rows, counts split into theory and lab columns, and a course that does not add up to its printed percentage. Plus class types, names and dates in any common format.
-- **plan:** credits to weekly classes, all four ways of counting classes left, combined and separate rules (with counts summed over the parts), course overrides and dates.
+- **plan:** credits to weekly classes, all four ways of counting classes left and the order they are tried in, a semester counted the way students count it, combined and separate rules (with counts summed over the parts), course overrides and dates.
 - **story:** the landing story is true for every minimum from 50% to 95%.
 
 <br>
@@ -295,6 +297,7 @@ Threshold was built on 10 October 2026 for the Coursera project *Playing with AI
 | **3** | Live on Vercel, the logo, the import prompt, cursor-aware details, rows that show attend and skip at a glance |
 | **After launch** | Subtler hover, a landing page that explains itself, answers that follow your numbers, a frosted nav, text kept clear of the readout |
 | **2.0** | A report reader that works by position, for any school's report, checked against the printed percentages; the planner became the dashboard; nothing kept between visits |
+| **2.1** | Each course's total classes this semester, so the numbers are exact, and the semester spelled out the way students count it |
 
 Every decision, bug and fix is written up in **[docs/DEVLOG.md](docs/DEVLOG.md)**, and each release is in **[CHANGELOG.md](CHANGELOG.md)**.
 

@@ -22,11 +22,29 @@ Each release has a git tag (`v1.2.0` and so on).
 4. Bump `version` in `package.json`.
 5. Tag and push. Vercel deploys `main` on its own.
    ```bash
-   git tag -a v2.1.0 -m "Threshold 2.1.0"
+   git tag -a v2.2.0 -m "Threshold 2.2.0"
    git push origin main --tags
    ```
 
 ---
+
+## [2.1.0] - 2026-10-10
+
+Exact numbers for the whole semester.
+
+### Added
+- **Each course's total classes this semester.** The review step asks for it beside every course (usually 15 a credit), and each course's drawer has it under "Total classes". With it, classes left, must attend and can skip are exact, and no dates are needed.
+- Classes left shows the semester beside it: "22 of 60", or "of ~48" when it is an estimate.
+- Rows show attended of held ("31 of 38 attended").
+- An opened course spells out the semester the way students count it: the classes it has, how many the minimum needs, how many can be missed in all, how many already were, and what that leaves.
+
+### Changed
+- What the college plans comes before an estimate. The order is a course's total classes, then its credits, then the pace so far, then classes a week.
+- Credits plan a 15-week semester: 15 classes a credit, or 30 in a lab. They used to stretch over the dates, which made a 4-credit course 62 classes instead of 60.
+- A row with no way to count the rest of the semester says "Add the total".
+- The sample's 2-credit studio is now 1 credit, so it stays believable at 30 classes.
+
+Commits: `7e12cfd` (course totals), and a docs commit with this entry. Dev log: [section 25](docs/DEVLOG.md#25-feedback-this-is-what-i-actually-need).
 
 ## [2.0.2] - 2026-10-10
 
@@ -181,6 +199,7 @@ Rounds 1 and 2 were built before the repository existed. The first commit, `6199
 
   Dev log: sections 1 to 9.
 
+[2.1.0]: https://github.com/sirgreaseball/threshold/compare/v2.0.2...v2.1.0
 [2.0.2]: https://github.com/sirgreaseball/threshold/compare/v2.0.1...v2.0.2
 [2.0.1]: https://github.com/sirgreaseball/threshold/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/sirgreaseball/threshold/compare/v1.2.1...v2.0.0
