@@ -161,7 +161,7 @@ export function slack(j) {
   return j.miss;
 }
 
-/** Everything the planner shows for one course. */
+/** Everything the dashboard shows for one course. */
 export function evaluate(course, rule, term, today = new Date()) {
   const left = classesLeft(course, term, today);
   const { attended, conducted } = sumParts(course.parts);
@@ -169,21 +169,40 @@ export function evaluate(course, rule, term, today = new Date()) {
     const j = judge(attended, conducted, minFor(rule, course, course.parts[0]), left.total);
     return { ...j, mode: 'combined', plan: left, parts: course.parts.map((p) => partView(p, rule, course, left)) };
   }
-  // Separate: each part must clear its own minimum. The course reads as its worst part.
+  // Separate: each part must clear its own minimum. The course takes its status
+  // from its worst part, and its counts are the sums over the parts: the classes
+  // that can be missed now, the classes needed to get back, and by the last
+  // class, how many of those still to come can be skipped.
   const parts = course.parts.map((p) => partView(p, rule, course, left));
+  const js = parts.map((p) => p.judge);
   const worst = parts.reduce((w, p) => (slack(p.judge) < slack(w.judge) ? p : w));
-  const endWorst = parts
-    .filter((p) => p.judge.end)
-    .reduce((w, p) => (!w || endSlack(p.judge.end) < endSlack(w.judge.end) ? p : w), null);
+  const sum = (f) => js.reduce((s, j) => s + f(j), 0);
+  const below = js.some((j) => j.status === 'below');
+  let end = null;
+  let endKind = null;
+  if (js.every((j) => j.end)) {
+    const short = parts.filter((p) => !p.judge.end.reachable);
+    const tightest = parts.reduce((w, p) => (endSlack(p.judge.end) < endSlack(w.judge.end) ? p : w));
+    endKind = tightest.kind;
+    end = {
+      total: sum((j) => j.end.total),
+      needed: sum((j) => j.end.needed),
+      maxSkip: short.length ? tightest.judge.end.maxSkip : sum((j) => j.end.maxSkip),
+      reachable: !short.length,
+      best: tightest.judge.end.best,
+    };
+  }
   return {
     ...worst.judge,
     pct: percent(attended, conducted),
     attended,
     conducted,
+    miss: below ? 0 : sum((j) => j.miss),
+    need: sum((j) => j.need),
     mode: 'separate',
     worstKind: worst.kind,
-    end: endWorst ? endWorst.judge.end : null,
-    endKind: endWorst ? endWorst.kind : null,
+    end,
+    endKind,
     left: left.total,
     plan: left,
     parts,

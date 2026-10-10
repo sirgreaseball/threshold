@@ -59,6 +59,21 @@ test('evaluate: separate minimums per type, worst part leads', () => {
   assert.equal(e.need, 14); // 15 of 20 is 75%; reaching 85% takes 14 in a row
 });
 
+test('evaluate: in separate mode the counts add up over the parts', () => {
+  const course = { id: 'x', name: 'Chem', parts: [part('t', 'Theory', 30, 36), part('p', 'Practical', 15, 20)] };
+  const e = evaluate(course, { min: 75, mode: 'separate', labMin: null }, term);
+  assert.equal(e.status, 'edge'); // the practical has nothing to spare
+  assert.equal(e.miss, 4); // so all four are theory classes
+  assert.equal(e.left, 27); // 17 theory and 10 practical still to come
+  assert.equal(e.end.maxSkip, 9); // 7 theory and 2 practical can be skipped
+  assert.equal(e.end.reachable, true);
+  // At 85% for labs, 25 of 30 practicals is the best case: short of the line, whatever the theory does.
+  const strict = evaluate(course, { min: 75, mode: 'separate', labMin: 85 }, term);
+  assert.equal(strict.end.reachable, false);
+  assert.equal(strict.endKind, 'Practical');
+  assert.equal(strict.end.best.toFixed(2), '83.33');
+});
+
 test('a course minimum overrides the college one', () => {
   assert.equal(minFor({ min: 75, mode: 'combined' }, { min: 90 }), 90);
   assert.equal(minFor({ min: 75, mode: 'separate', labMin: 85 }, {}, { kind: 'Practical' }), 85);
