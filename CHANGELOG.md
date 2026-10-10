@@ -22,11 +22,47 @@ Each release has a git tag (`v1.2.0` and so on).
 4. Bump `version` in `package.json`.
 5. Tag and push. Vercel deploys `main` on its own.
    ```bash
-   git tag -a v1.3.0 -m "Threshold 1.3.0"
+   git tag -a v2.1.0 -m "Threshold 2.1.0"
    git push origin main --tags
    ```
 
 ---
+
+## [2.0.0] - 2026-10-10
+
+Any school's report, and nothing kept.
+
+### Changed, breaking
+- **Nothing is saved between visits.** Courses live in memory, so a reload starts empty. Courses that 1.x saved in `localStorage` are deleted on the first visit.
+- **The planner is now the dashboard, at `/dashboard/`.** `/app` and everything under it redirect there permanently, and the web manifest starts there.
+- **An import replaces everything** on the dashboard, the previous report's dates included. The merge option is gone, and Undo brings the old courses back.
+
+### Added
+- **A report reader that works by position** (`src/table.js`). It finds the header row and its columns, starts a record at each serial number, joins wrapped names and rows split by a page break, and skips footnotes. It reads:
+  - tutorial rows typed TUTL, and other class codes;
+  - absent-only columns and "23/27" fractions;
+  - theory and lab counts in separate columns, on one header line or under a group label;
+  - merged course cells and totals rows.
+
+  The text reader stays as the fallback for text without a header row.
+- **The review checks the report.** It says whether every course adds up to the percentage printed on the report, and flags any course that does not.
+- Rows without dates show what the minimum allows today: "4 now" to skip, or "Next 6" to attend.
+- Dates in more formats: 7 Jul 2026, July 7, 2026 and 2026-07-07.
+- Course names keep "(IPC)", "Socio-Legal" and "CRPC".
+
+### Fixed
+- Courses on another school's report came out named after their class type ("Tutl"), with counts from the wrong rows.
+- Percentages show two decimals, rounded the way the report prints them (77.78%, not 77.7%). They are never rounded up onto a whole number.
+- In separate mode, a row's classes left, must attend and can skip are sums over its parts. They used to show only the tightest part.
+- Loading the sample no longer resets the minimum to 75%.
+- Long course names wrap in the review instead of being cut off.
+- On narrow phones, the hero's "Import my report" link moves under the button instead of breaking over two lines.
+
+### Copy
+- "Open planner" became "Dashboard" in the nav and "Check my attendance" on the page.
+- The closing line is now "Drop in your report. Know before you skip.", since nothing is set up to last any more.
+
+Commits: `4bc40f1` (the reader), `bdfc258` (separate-mode sums), `7cf4f99` (the dashboard and memory-only state), and a docs commit with this entry. Dev log: [section 24](docs/DEVLOG.md#24-feedback-every-schools-report-logic-that-holds-nothing-kept).
 
 ## [1.2.1] - 2026-10-10
 
@@ -131,6 +167,7 @@ Rounds 1 and 2 were built before the repository existed. The first commit, `6199
 
   Dev log: sections 1 to 9.
 
+[2.0.0]: https://github.com/sirgreaseball/threshold/compare/v1.2.1...v2.0.0
 [1.2.1]: https://github.com/sirgreaseball/threshold/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/sirgreaseball/threshold/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/sirgreaseball/threshold/compare/v1.0.1...v1.1.0

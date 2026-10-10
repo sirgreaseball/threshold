@@ -1,8 +1,8 @@
 {
   "name": "threshold",
-  "version": "1.2.1",
+  "version": "2.0.0",
   "private": true,
-  "description": "Attendance planner: how many classes you can miss before your college's minimum",
+  "description": "Attendance dashboard: how many classes you can miss before your college's minimum, from any school's report",
   "homepage": "https://stayabove.vercel.app",
   "author": "Dhruv Sonar",
   "license": "UNLICENSED",

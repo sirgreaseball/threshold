@@ -402,3 +402,74 @@ Collaborators, checked through the GitHub API before pushing:
 - Its only collaborator is the owner (admin), and there are no pending invitations.
 - Every commit is authored by me, with no co-author trailers, so GitHub lists a single contributor.
 - Vercel's GitHub app can read the repository, because it deploys every push. It is an app installation, not a collaborator.
+
+## 24. Feedback: every school's report, logic that holds, nothing kept
+
+My next note, after trying a School of Law report:
+- the import did not work for other schools' reports. Courses came out as "TUT" and similar instead of the subject's name;
+- the attendance was not worked out as intended;
+- switching the minimum on the dashboard from 75 to 70 or 80 did not seem to change the numbers;
+- move the planner off `/app`, rename it, and give "Open planner" a better label;
+- store nothing locally, and stay open to whatever report gets uploaded: law, pharmacy, commerce, business management;
+- try a different way of reading the PDF;
+- then commit and push, with me as the only contributor, and make the repository public.
+
+What was wrong:
+- **The reader.** The old parser read the PDF's text in the order pdf.js returns it and anchored each row on its type word (THEO, PRAC, TUT, STUDIO). The law report types its tutorials TUTL, which it did not know. Tutorial rows were swallowed into the next row's text, so courses came out named "Tutl", "Al" or "Of", with counts from the wrong rows.
+- **Merging.** When the dashboard already had courses, the review step defaulted to "Update matching courses and add new ones". A second report mixed with the first one's courses.
+- **Rows without dates** showed nothing under "You must attend" and "You can skip". Changing the minimum looked like it did nothing.
+- **One decimal, truncated.** 7 of 9 classes, 77.78% on a report, showed as 77.7%.
+- **The minimum itself was fine.** A headless test on the dev server showed every number following the minimum whenever the classes left were known. What I saw came from the four problems above.
+
+What changed:
+- **A new reader that goes by position** (`src/table.js`). pdf.js gives every piece of text with its page, position and size, so the reader works with the table's layout:
+  1. **The header.** It finds a line that names a course column and a held or attended column. Header words stacked over two or three lines ("Total No. Of / Classes / Conducted") join the column under them. A label over several columns, such as "Theory" over "Held" and "Attended", names their kind.
+  2. **Columns.** Each column runs from halfway to its left neighbour to halfway to its right one. Every piece below the header goes to the column under its centre.
+  3. **Records.** A record starts at each serial number, or at each line with counts when there is no serial column. Lines in between are cells that wrapped ("LAW OF TORTS AND" / "CONSUMER PROTECTION"), including across a page break. A sentence wider than most of the table is a footnote, and ends the record.
+  4. **Courses.** Records with the same course name become the parts of one course. The type column only decides whether a part is theory, practical, tutorial or studio.
+  5. **The check.** Each course is checked against the percentage printed on the report, whether the report prints it once per course or once per row.
+
+  Columns are known by their words: serial number, course or subject, code, type, held (conducted, delivered, total), attended (present), absent, percentage and credits. So the reader also handles absent-only columns, "23/27" fractions, separate theory and lab columns, merged course cells and totals rows. Text with no header row still goes to the old text reader, which now knows TUTL and other codes.
+- **Class types by their words** (`kindOf`). THEO and Lecture are theory; PRAC, Lab, Embedded Lab and Moot court are practical; TUTL and Seminar are tutorial; STDO is studio. Anything else, such as "Program Elective", counts as theory.
+- **Names and dates.** "(IPC)", "CRPC", "Socio-Legal" and "Women's" come out right. Dates are read in more formats: 06.07.2026, 6 Jul 2026, July 6, 2026 and 2026-07-06.
+- **The review checks the report.** It says "Every percentage matches the report", or flags each course that does not add up, with the printed figure beside it.
+- **Imports replace everything,** the dates of the last report included. Undo brings it all back. The merge choice is gone.
+- **Nothing is stored.**
+  - The dashboard's state lives in memory.
+  - Courses saved by earlier versions under `threshold.v2` and `threshold.v1` are deleted on sight.
+  - What is left in storage: the theme, and the one-time hand-off of a report dropped on the landing page, deleted as soon as it is read.
+  - The landing page passes its minimum along in the address, as `/dashboard/?min=80`.
+- **Numbers that always answer.**
+  - Percentages have two decimals, rounded like the report, but never rounded up onto a whole number: 79.996% reads 79.99%.
+  - Without dates, the rows say what the minimum allows today: "4 now" under "You can skip", or "Next 6" under "You must attend".
+  - In separate mode, a row's numbers are sums over its parts.
+- **The sample keeps your minimum.** It used to reset it to 75%.
+- **The planner is now the dashboard,** at `/dashboard/`.
+  - `vercel.json` sends `/app` and anything under it there permanently, and the web manifest starts there.
+  - The nav says "Dashboard" and the calls to action say "Check my attendance".
+  - The closing line is "Drop in your report. Know before you skip.", since nothing is set up to last any more.
+- **Small layout fixes.** Long names in the review wrap instead of being cut off. On narrow phones, the hero's "Import my report" link moves under the button.
+
+How it was checked:
+- **29 tests pass**, 10 of them new:
+  - the position reader on synthetic reports: a stacked header repeated on page two, TUTL rows, wrapped names, a row split by the page break, and footnotes;
+  - other layouts: codes, absent columns, fractions, merged cells, totals rows, and theory and lab counts in separate columns, flat or under a group label;
+  - a course that does not add up to its printed percentage;
+  - class types, names and dates;
+  - the separate-mode sums.
+- **Two real reports, kept out of the repository,** went through the same code as the browser. One is the School of Law report, with theory and tutorial rows. The other is an engineering report, with theory and practical rows. Every course's percentage matched the printed one: 8 of 8 on each.
+- **Headless Chrome on the dev server:**
+  - Courses saved by an old version were deleted, and nothing was loaded.
+  - The law report imported with "Every percentage matches the report."
+  - Switching the minimum between 80, 75, 70 and 85 changed every row. For example, the sample's Computer Networks can skip 10 at 75% and 6 at 80%.
+  - Separate mode showed the sums.
+  - A reload left the dashboard and storage empty.
+  - A pasted table without dates showed "5 now" at 75% and "1 now" at 80%, and "Next 6" and "Next 15" for the course below the line.
+  - The sample kept 80%.
+  - The landing page handed on `?min=80`, and a report dropped there arrived for review with nothing left in session storage.
+- **No regressions.** The hover sweep found no overlaps, and there is no sideways scroll at 360, 390 and 430 px wide.
+
+The repository:
+- It is now public, at my request. It is still all rights reserved: the README's license section and `package.json` say so, and being able to read the code does not grant a license to use it.
+- The only collaborator is still me. Every commit is mine, with no co-author lines.
+- The real reports used for testing are not in the repository. Every fixture is made up.
