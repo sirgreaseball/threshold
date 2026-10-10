@@ -23,10 +23,12 @@ See how many classes you can miss in every course,<br>under whatever attendance 
 
 <br>
 
+<p>
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/media/hero-dark.png">
   <img src="docs/media/hero-light.png" alt="The Threshold landing page. The headline 'Stay above the line.' sits half under cobalt water, and an example course at 84.2% with 4 classes to spare sits in the corner.">
 </picture>
+</p>
 
 <br>
 
@@ -92,10 +94,12 @@ At 75% it happens to be right, which is why most online calculators look fine un
 
 ## Bring your own report
 
+<p>
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/media/import-dark.png">
   <img src="docs/media/import-light.png" alt="The import prompt: 'Import your attendance report?' with a drop zone for the PDF, a Browse files button and a link to paste the table instead.">
 </picture>
+</p>
 
 Drop in the attendance PDF from your college portal, or paste the table, and Threshold builds the semester for you. It reads every course, its theory and practical rows, your college's minimum and the semester dates.
 
@@ -131,44 +135,52 @@ flowchart LR
 
 ## The planner
 
+<p>
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/media/planner-dark.png">
   <img src="docs/media/planner-light.png" alt="The planner with a sample semester. The headline reads 'Distributed Computing is below 75%.' Above the course table, a row of liquid tanks shows each course against a dashed 75% line, with the one course below the line in red.">
 </picture>
+</p>
 
 - **The headline is the one thing to know right now:** which course is below the line, or which has the least room.
 - **One tank per course**, on a shared scale with your minimum as a dashed line. Tanks near the cursor swell like a dock, and the water reaches toward the pointer.
 - **Every row shows** classes left, how many you must attend and how many you can skip, without opening it.
 - **Log a class in one tap**, Present or Absent for each part, with an undo after every change.
 
+<p>
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/media/course-dark.png">
   <img src="docs/media/course-light.png" alt="One course opened: Operating Systems with theory 26 of 33 and practical 20 of 22. It has Present and Absent buttons, a choice of how to count the rest of the semester, and a per-course minimum.">
 </picture>
+</p>
 
 <br>
 
 ## The landing page tells the story
 
+<p>
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/media/story-dark.png">
   <img src="docs/media/story-light.png" alt="Mid-scroll on the landing page. 'Keep skipping and you sink fast.' The example course has fallen to 69.5%, the water is below a red dashed line, and the readout says to attend the next 10 in a row.">
 </picture>
+</p>
 
 As you scroll, an example course skips classes. The water sinks, the line turns red, and then the course climbs back. The readout in the corner doubles as a progress bar, with one mark per class. Every number in the story is generated for whichever minimum you choose, so the copy is true at 70% just as it is at 85%. `tests/story.test.js` checks this for every minimum from 50% to 95%.
 
 Then you try it on one of your own courses. The vessel fills to your attendance as you type, and the three answers below follow every number.
 
+<p>
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/media/answers-dark.png">
   <img src="docs/media/answers-light.png" alt="'Try it on one course' with 34 attended, 40 held, 45 still to come and an 80% minimum. The vessel reads 'You can miss 2 more classes', and the three answers below read 2 classes to spare, 6 in a row after missing 4, and 11 of the 45 still to come.">
 </picture>
+</p>
 
 <br>
 
 ## On your phone
 
-<img src="docs/media/phones.png" alt="Four phone screens: the landing hero, Try it, and the planner in light and dark.">
+<p><img src="docs/media/phones.png" alt="Four phone screens: the landing hero, Try it, and the planner in light and dark."></p>
 
 The layout uses `svh` units, so mobile browser bars never crop it. Inputs are 16px, which stops iOS from zooming in. Sheets slide up from the bottom, and everything respects the safe areas. On a phone the readout sits in the top corner, so story text holds still at its anchor and dissolves there instead of sliding underneath. Hover effects only switch on for a real mouse.
 
@@ -186,7 +198,7 @@ The layout uses `svh` units, so mobile browser bars never crop it. Inputs are 16
 
 ## Under the hood
 
-| | |
+| Part | What it uses |
 |---|---|
 | **Build** | Vite 6, two pages (landing and planner), vanilla JavaScript, no framework |
 | **Motion** | GSAP 3.15 (ScrollTrigger, SplitText), Lenis 1.3 |

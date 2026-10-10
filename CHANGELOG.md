@@ -40,7 +40,7 @@ The repository gets a proper front page.
 - A full README. It has light and dark screenshots that follow GitHub's theme, the maths as formulas, the import pipeline as a diagram, the project layout and how to run it.
 - This changelog, plus git tags for every release since launch.
 
-Commits: `d809c9d` (footers), `e4c282c` (README), and the commit that adds this file. Dev log: [section 23](docs/DEVLOG.md#23-feedback-drop-the-credit-line-and-a-proper-repository).
+Commits: `d809c9d` (footers), `e4c282c` (README), `2795954` (this changelog and the dev log), and a final README tidy. Dev log: [section 23](docs/DEVLOG.md#23-feedback-drop-the-credit-line-and-a-proper-repository).
 
 ## [1.2.0] - 2026-10-10
 
