@@ -481,3 +481,5 @@ The repository:
   - `/app`, `/app/`, `/app/?min=80` and `/app/index.html` all return 308 to `/dashboard/`, with the query kept;
   - a browser opening `/app/#start` lands on the dashboard with the import prompt open;
   - the full headless run (import, every minimum, separate mode, reload, paste, sample, hand-off) passed on the live site with no errors.
+
+**2.0.2.** The dashboard screenshot from the law import showed a tank labelled "BNS2": the short label took an initial from every word, the year 2023 included. A name that ends in its own bracketed abbreviation now uses it, so that course reads "IPC". A year gives no initial, and only a small number or a Roman numeral at the end stays whole ("Mathematics III" is still "M3"). Two new cases in the plan tests cover it; 29 tests pass.

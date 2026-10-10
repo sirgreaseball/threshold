@@ -28,6 +28,13 @@ Each release has a git tag (`v1.2.0` and so on).
 
 ---
 
+## [2.0.2] - 2026-10-10
+
+### Fixed
+- The short labels under the tanks took an initial from a year, so a course named "..., 2023 (IPC)" read "BNS2". A name that ends in its own bracketed abbreviation now uses it ("IPC"), and a year gives no initial.
+
+Commit: `8285468`. Dev log: [section 24](docs/DEVLOG.md#24-feedback-every-schools-report-logic-that-holds-nothing-kept), "After the release".
+
 ## [2.0.1] - 2026-10-10
 
 ### Fixed
@@ -174,6 +181,7 @@ Rounds 1 and 2 were built before the repository existed. The first commit, `6199
 
   Dev log: sections 1 to 9.
 
+[2.0.2]: https://github.com/sirgreaseball/threshold/compare/v2.0.1...v2.0.2
 [2.0.1]: https://github.com/sirgreaseball/threshold/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/sirgreaseball/threshold/compare/v1.2.1...v2.0.0
 [1.2.1]: https://github.com/sirgreaseball/threshold/compare/v1.2.0...v1.2.1

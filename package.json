@@ -1,6 +1,6 @@
 {
   "name": "threshold",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "private": true,
   "description": "Attendance dashboard: how many classes you can miss before your college's minimum, from any school's report",
   "homepage": "https://stayabove.vercel.app",
