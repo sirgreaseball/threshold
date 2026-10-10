@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
+    <title>Threshold</title>
+    <meta name="description" content="Import your attendance report and see, for every course, how many classes you can miss before your college's minimum." />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#f1f1ee" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0e0f11" media="(prefers-color-scheme: dark)" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32" />
+    <link rel="apple-touch-icon" href="/icon-180.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <script>
+      (function () {
+        var t = null;
+        try { t = localStorage.getItem('threshold.theme'); } catch (e) {}
+        document.documentElement.dataset.theme = t || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      })();
+    </script>
+    <script type="module" src="/src/app.js"></script>
+  </head>
+  <body class="planner">
+    <header class="bar">
+      <a class="wordmark bar__mark" href="/" data-magnet="0.18"><svg class="wordmark__mark" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><clipPath id="tm-clip"><rect width="64" height="64" rx="15"/></clipPath><g clip-path="url(#tm-clip)"><rect width="64" height="64" fill="#101113"/><path fill="#2e33f0" d="M0 25.5C10 21 21 21 32 24.8S54 28.6 64 24.4V64H0Z"/><rect y="38" width="64" height="5.5" fill="#f4f4f2"/></g></svg><span>Threshold</span></a>
+      <div class="bar__right">
+        <button type="button" class="rule-pill" id="rule-btn" aria-haspopup="dialog" data-magnet="0.22">
+          <span class="rule-pill__k">Minimum</span>
+          <span class="rule-pill__v num" id="rule-val">75%</span>
+        </button>
+        <button type="button" class="btn btn--ghost btn--sm bar__import" id="import-btn" data-magnet="0.3"><i data-icon="upload"></i><span>Import</span></button>
+        <button class="theme-btn" id="theme-btn" data-magnet="0.35"></button>
+      </div>
+    </header>
+
+    <main class="wrap" id="main">
+      <section class="summary" aria-labelledby="lede">
+        <div class="summary__text">
+          <h1 class="summary__lede" id="lede">Add your courses to see your margin.</h1>
+          <p class="summary__sub" id="lede-sub"></p>
+        </div>
+        <div class="sky" id="sky">
+          <canvas class="sky__canvas" id="sky-canvas" aria-hidden="true"></canvas>
+          <ol class="sky__labels" id="sky-labels" aria-label="Courses at a glance"></ol>
+          <div class="sky__tip" id="sky-tip" aria-hidden="true"></div>
+        </div>
+      </section>
+
+      <section class="term" id="term" aria-label="Semester dates">
+        <div class="term__field">
+          <label for="term-start">Classes began</label>
+          <input type="date" id="term-start" />
+        </div>
+        <div class="term__field">
+          <label for="term-end">Classes end</label>
+          <div class="term__end">
+            <input type="date" id="term-end" />
+            <button type="button" class="chip" id="term-suggest" hidden></button>
+          </div>
+        </div>
+        <div class="term__field">
+          <label for="term-asof">Counts as of</label>
+          <input type="date" id="term-asof" />
+        </div>
+        <p class="term__note" id="term-note"></p>
+      </section>
+
+      <section class="courses" aria-label="Courses">
+        <div class="courses__head" id="courses-head" aria-hidden="true">
+          <span>Course</span>
+          <span>Attendance</span>
+          <span>Classes left</span>
+          <span>You must attend</span>
+          <span>You can skip</span>
+          <span></span>
+        </div>
+        <ul class="rows" id="rows"></ul>
+
+        <div class="empty" id="empty" hidden>
+          <button type="button" class="drop" id="empty-drop">
+            <span class="drop__icon"><i data-icon="file"></i></span>
+            <span class="drop__title">Drop in your attendance report</span>
+            <span class="drop__body">A PDF from your college portal, or a copy of the table. It is read on this device and never uploaded.</span>
+            <span class="btn btn--sm drop__btn">Browse files</span>
+          </button>
+          <div class="empty__alt">
+            <button type="button" class="btn btn--ghost btn--sm" id="empty-add"><i data-icon="plus"></i> Add a course by hand</button>
+            <button type="button" class="btn btn--ghost btn--sm" id="empty-sample">Try a sample semester</button>
+          </div>
+        </div>
+
+        <div class="courses__foot" id="courses-foot">
+          <button type="button" class="btn btn--ghost btn--sm" id="add-btn"><i data-icon="plus"></i> Add a course</button>
+          <button type="button" class="link" id="sample-btn">Load the sample</button>
+          <button type="button" class="link link--danger" id="clear-btn">Clear everything</button>
+        </div>
+      </section>
+
+      <footer class="foot">
+        <p>&copy; 2026 Dhruv Sonar. All rights reserved.</p>
+        <p>Saved in this browser only. Nothing is sent anywhere.</p>
+      </footer>
+    </main>
+
+    <input type="file" id="file-input" accept="application/pdf,.pdf,.txt,.csv,.tsv,text/plain,text/csv" hidden />
+
+    <dialog class="sheet" id="import-dialog" aria-labelledby="import-title">
+      <div class="sheet__head">
+        <h2 class="sheet__title" id="import-title">Import your report</h2>
+        <button type="button" class="btn btn--ghost btn--icon btn--sm" data-close aria-label="Close" data-magnet="0.3"><i data-icon="x"></i></button>
+      </div>
+      <p class="sheet__lede" id="import-lede" hidden>
+        Drop the attendance PDF from your college portal and Threshold sets up every course, its theory and practical
+        classes and your college's minimum. Or close this and add courses by hand.
+      </p>
+
+      <div class="import" data-step="pick">
+        <div class="sheet__body import__pick">
+          <button type="button" class="drop" id="import-drop" data-spot>
+            <span class="drop__icon" data-magnet="0.4"><i data-icon="file"></i></span>
+            <span class="drop__title">Drop the PDF here</span>
+            <span class="drop__body">Or browse for it. Attendance reports with theory and practical rows work best.</span>
+            <span class="btn btn--sm drop__btn">Browse files</span>
+          </button>
+          <details class="paste">
+            <summary><i data-icon="paste"></i> Paste the table instead</summary>
+            <label class="sr-only" for="paste-text">Report text</label>
+            <textarea id="paste-text" rows="6" placeholder="Copy the table from your portal or a spreadsheet and paste it here.&#10;Computer Networks  Theory  22  21&#10;Physics  30  40"></textarea>
+            <button type="button" class="btn btn--sm" id="paste-go">Read the text</button>
+          </details>
+          <p class="import__error" id="import-error" role="alert"></p>
+          <p class="import__privacy">Read on this device. Your name and ID numbers on the report are ignored and never saved.</p>
+        </div>
+      </div>
+
+      <div class="import" data-step="busy" hidden>
+        <div class="sheet__body import__busy">
+          <span class="busy__bar"><span></span></span>
+          <p id="busy-text">Reading your report</p>
+        </div>
+      </div>
+
+      <div class="import" data-step="review" hidden>
+        <div class="sheet__body import__review">
+          <p class="review__lede" id="review-lede"></p>
+          <div class="review__facts" id="review-facts"></div>
+          <ul class="review__list" id="review-list"></ul>
+          <fieldset class="review__mode" id="review-mode" hidden>
+            <legend>Your planner already has courses</legend>
+            <label class="radio"><input type="radio" name="merge" value="merge" checked /><span>Update matching courses and add new ones</span></label>
+            <label class="radio"><input type="radio" name="merge" value="replace" /><span>Replace all my courses</span></label>
+          </fieldset>
+        </div>
+        <div class="sheet__foot">
+          <button type="button" class="btn btn--ghost btn--sm" id="review-back">Back</button>
+          <button type="button" class="btn btn--sm btn--accent" id="review-go">Import</button>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog class="sheet sheet--narrow" id="rule-dialog" aria-labelledby="rule-title">
+      <div class="sheet__head">
+        <h2 class="sheet__title" id="rule-title">Your college's rule</h2>
+        <button type="button" class="btn btn--ghost btn--icon btn--sm" data-close aria-label="Close"><i data-icon="x"></i></button>
+      </div>
+      <div class="sheet__body rule">
+        <fieldset class="rule__group">
+          <legend>Minimum attendance</legend>
+          <div class="rule__chips" id="rule-chips"></div>
+          <label class="rule__other">
+            <span>Other</span>
+            <input type="number" inputmode="numeric" min="1" max="100" id="rule-other" class="num" aria-label="Other minimum, in percent" />
+            <span>%</span>
+          </label>
+        </fieldset>
+        <fieldset class="rule__group">
+          <legend>How it is counted</legend>
+          <label class="option">
+            <input type="radio" name="rule-mode" value="combined" />
+            <span class="option__body"><b>Per course, all types together</b><span>One percentage per course, the way most reports show it.</span></span>
+          </label>
+          <label class="option">
+            <input type="radio" name="rule-mode" value="separate" />
+            <span class="option__body"><b>Each type on its own</b><span>Theory, practical and tutorial must each clear the minimum.</span></span>
+          </label>
+          <label class="rule__lab" id="rule-lab-wrap">
+            <span>Practical and studio minimum</span>
+            <input type="number" inputmode="numeric" min="1" max="100" id="rule-lab" class="num" placeholder="Same" aria-label="Practical and studio minimum, in percent" />
+            <span>%</span>
+          </label>
+        </fieldset>
+        <p class="rule__note">Every course can also have its own minimum, in its details.</p>
+      </div>
+      <div class="sheet__foot">
+        <button type="button" class="btn btn--sm" data-close>Done</button>
+      </div>
+    </dialog>
+
+    <div class="toast" id="toast" role="status" aria-live="polite">
+      <span class="toast__msg"></span>
+      <button type="button" class="toast__undo"><i data-icon="undo"></i> Undo</button>
+    </div>
+
+    <template id="row-tpl">
+      <li class="row">
+        <button type="button" class="row__sum" aria-expanded="false" data-spot>
+          <span class="row__title">
+            <span class="row__name"></span>
+            <span class="row__meta"><span class="row__parts"></span><span class="row__flag"></span></span>
+          </span>
+          <span class="row__level">
+            <span class="meter"><span class="meter__fill"></span><span class="meter__tick"></span></span>
+            <span class="row__pct num"></span>
+          </span>
+          <span class="row__stat row__left"><span class="row__k">Classes left</span><span class="row__v"></span></span>
+          <span class="row__stat row__attend"><span class="row__k">You must attend</span><span class="row__v"></span></span>
+          <span class="row__stat row__skip"><span class="row__k">You can skip</span><span class="row__v"></span></span>
+          <span class="row__chev" data-magnet="0.35"><i data-icon="caret"></i></span>
+        </button>
+        <div class="row__drawer">
+          <div class="drawer">
+            <div class="drawer__in">
+              <div class="drawer__col">
+                <label class="field-label" data-for="name">Course name</label>
+                <input class="drawer__name" maxlength="60" data-field="name" />
+                <p class="field-label drawer__parts-k">Classes</p>
+                <ul class="parts"></ul>
+                <div class="parts__add"></div>
+              </div>
+              <div class="drawer__col">
+                <p class="field-label">Rest of the semester</p>
+                <div class="plan">
+                  <div class="plan__modes" role="radiogroup" aria-label="How to estimate the classes left"></div>
+                  <div class="plan__inputs"></div>
+                  <p class="plan__forecast"></p>
+                </div>
+                <div class="drawer__row">
+                  <label class="field-label" data-for="min">Minimum for this course</label>
+                  <select class="drawer__min num" data-field="min"></select>
+                </div>
+                <button type="button" class="btn btn--ghost btn--sm drawer__delete" data-act="delete"><i data-icon="trash"></i> Remove course</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </li>
+    </template>
+
+    <template id="part-tpl">
+      <li class="part">
+        <span class="part__kind"></span>
+        <span class="part__counts num">
+          <input class="cnt" data-k="attended" inputmode="numeric" />
+          <span class="part__of">of</span>
+          <input class="cnt" data-k="conducted" inputmode="numeric" />
+        </span>
+        <span class="part__pct num"></span>
+        <span class="part__act">
+          <button type="button" class="btn btn--sm btn--soft" data-act="present"><i data-icon="check"></i> Present</button>
+          <button type="button" class="btn btn--sm btn--ghost" data-act="absent"><i data-icon="x"></i> Absent</button>
+          <button type="button" class="btn btn--ghost btn--icon btn--sm part__del" data-act="del-part"><i data-icon="trash"></i></button>
+        </span>
+      </li>
+    </template>
+  </body>
+</html>

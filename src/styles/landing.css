@@ -1,0 +1,909 @@
+/* Landing. The stage maps (P - 15)% to its bottom edge and (P + 25)% to its
+   top, so the minimum's line always sits at 62.5% of the viewport height,
+   whatever P is. Hero copy is laid out around that line. svh, not dvh: the
+   hero must not jump when a phone's address bar slides away. */
+.landing {
+  --line-y: 62.5svh;
+  overflow-x: clip;
+}
+
+/* Headings are split into lines once fonts load; hide them until then so
+   they never flash unsplit and then jump. */
+.js [data-split]:not(.is-split) {
+  visibility: hidden;
+}
+
+/* Nav */
+.nav {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: calc(68px + env(safe-area-inset-top, 0px));
+  padding: env(safe-area-inset-top, 0px) var(--gutter) 0;
+  pointer-events: none;
+  transition: transform 0.8s var(--ease-out);
+}
+
+/* Slides away while reading down, comes back on any scroll up. */
+.nav.is-hidden {
+  transform: translateY(-110%);
+}
+
+.nav > * {
+  pointer-events: auto;
+}
+
+.nav__mark {
+  font-size: 22px;
+}
+
+.nav__right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Text inversion: the original (top) layer and the paper-coloured copy. */
+:where(.invert-host) {
+  position: relative;
+}
+
+.invert-a,
+.invert-b {
+  display: block;
+}
+
+.invert-b {
+  position: absolute;
+  inset: 0;
+  color: var(--inv, var(--on-accent));
+  pointer-events: none;
+  clip-path: inset(100% 0 0 0);
+}
+
+/* Stage */
+.stage {
+  position: relative;
+}
+
+.stage__sticky {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  overflow: hidden;
+}
+
+.stage__canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* The beats sit over the sticky stage (a sticky element is its own stacking
+   context, so the readout cannot rise above them). Let clicks fall through to
+   the readout and its minimum picker; links and buttons in the copy still work. */
+.beats {
+  position: relative;
+  margin-top: -100svh;
+  pointer-events: none;
+}
+
+.beats a,
+.beats button {
+  pointer-events: auto;
+}
+
+.hud {
+  position: absolute;
+  top: calc(92px + env(safe-area-inset-top, 0px));
+  right: var(--gutter);
+  z-index: 3;
+  display: grid;
+  justify-items: end;
+  gap: 4px;
+  text-align: right;
+}
+
+.hud__pct {
+  font-family: var(--sans);
+  font-size: clamp(40px, 5.4vw, 84px);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.055em;
+}
+
+.hud__row {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.hud__state {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* The minimum picker. */
+.rule {
+  position: relative;
+  margin-top: 10px;
+}
+
+.rule__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 10px 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--paper) 70%, transparent);
+  box-shadow: inset 0 0 0 1px var(--hair);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  font-size: 13px;
+  color: var(--muted);
+  cursor: pointer;
+  transition: transform 0.16s var(--ease-out), background-color 0.3s;
+}
+
+.rule__btn:active {
+  transform: scale(0.97);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .rule__btn:hover {
+    background: var(--accent-soft);
+  }
+}
+
+.rule__val {
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.rule__btn svg {
+  width: 14px;
+  height: 14px;
+  transition: transform 0.5s var(--ease-out);
+}
+
+.rule.is-open .rule__btn svg {
+  transform: rotate(180deg);
+}
+
+.rule__pop {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  display: grid;
+  gap: 12px;
+  width: max-content;
+  max-width: min(320px, calc(100vw - 32px));
+  padding: 14px;
+  border-radius: 16px;
+  background: var(--paper);
+  box-shadow: 0 18px 50px var(--shadow), 0 0 0 1px var(--hair);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-6px) scale(0.98);
+  transform-origin: top right;
+  transition: opacity 0.25s, transform 0.45s var(--ease-out), visibility 0s 0.45s;
+}
+
+.rule.is-open .rule__pop {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  transition: opacity 0.25s, transform 0.45s var(--ease-out), visibility 0s;
+}
+
+.rule__chips {
+  display: grid;
+  grid-template-columns: repeat(3, auto);
+  gap: 6px;
+}
+
+.rule__chips .chip {
+  justify-content: center;
+}
+
+.rule__other {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.rule__other input {
+  width: 68px;
+  height: 34px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1px var(--hair);
+  background: transparent;
+  color: var(--ink);
+  text-align: center;
+}
+
+.rule__other input:focus {
+  outline: none;
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+}
+
+/* Hero */
+.beat.beat--hero {
+  display: block;
+  height: 100svh;
+  min-height: 560px;
+  padding: 0;
+}
+
+.hero__title {
+  position: absolute;
+  left: var(--gutter);
+  bottom: calc(100svh - var(--line-y) + clamp(18px, 2.6vh, 32px));
+  font-size: clamp(52px, 9.4vw, 168px);
+  font-weight: 600;
+  line-height: 0.92;
+  letter-spacing: -0.055em;
+}
+
+.hero__title .line {
+  display: block;
+  overflow: hidden;
+  padding-bottom: 0.06em;
+  margin-bottom: -0.06em;
+}
+
+.hero__title .line > span {
+  display: block;
+}
+
+.hero__below {
+  position: absolute;
+  left: var(--gutter);
+  right: var(--gutter);
+  top: calc(var(--line-y) + clamp(22px, 3.4vh, 40px));
+  display: grid;
+  gap: 28px;
+  max-width: 560px;
+}
+
+.hero__sub {
+  font-size: clamp(16px, 1.35vw, 20px);
+  line-height: 1.45;
+  color: var(--muted);
+  max-width: 34ch;
+  --inv: rgb(244 244 242 / 0.86);
+}
+
+.hero__cta {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+}
+
+.hero__link {
+  font-size: 15px;
+  font-weight: 500;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 5px;
+}
+
+/* Story beats. Each beat's copy comes to rest in the dry band above the
+   surface when the beat's top reaches the top of the viewport (its anchor). */
+.beat {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  min-height: 105svh;
+  padding: 26svh var(--gutter) 0;
+}
+
+.beat--c {
+  min-height: 150svh;
+}
+
+.beat__copy {
+  display: grid;
+  gap: 20px;
+  max-width: 620px;
+}
+
+.beat--b .beat__copy {
+  margin-left: 12vw;
+}
+
+.beat--c .beat__copy {
+  margin-left: 24vw;
+}
+
+.beat h2 {
+  font-size: clamp(36px, 4.6vw, 76px);
+  font-weight: 600;
+  line-height: 0.98;
+  letter-spacing: -0.045em;
+}
+
+.beat p {
+  font-size: clamp(16px, 1.3vw, 19px);
+  color: var(--muted);
+  max-width: 40ch;
+  --inv: rgb(244 244 242 / 0.86);
+}
+
+/* Split-text lines (SplitText adds a mask wrapper around each line). */
+[data-split] .split-line-mask {
+  padding-bottom: 0.14em;
+  margin-bottom: -0.14em;
+}
+
+/* Questions */
+.qs {
+  position: relative;
+  z-index: 1;
+  margin-top: -40svh;
+  border-radius: var(--panel-r) var(--panel-r) 0 0;
+  background: var(--paper);
+  box-shadow: 0 -30px 50px -24px var(--shadow);
+  padding: clamp(96px, 16vh, 180px) var(--gutter) clamp(80px, 12vh, 140px);
+}
+
+.qs__title {
+  font-size: clamp(36px, 5.2vw, 88px);
+  font-weight: 600;
+  line-height: 0.98;
+  letter-spacing: -0.045em;
+  max-width: 14ch;
+  margin-bottom: clamp(56px, 9vh, 112px);
+}
+
+.qs__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.q {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) minmax(180px, 0.7fr);
+  gap: 32px;
+  align-items: end;
+  padding: clamp(28px, 4vh, 44px) 0;
+  border-top: 1px solid var(--hair);
+}
+
+.q__ask {
+  font-size: clamp(28px, 3.4vw, 56px);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
+.q__body {
+  color: var(--muted);
+  max-width: 36ch;
+  padding-bottom: 6px;
+}
+
+.q__fig {
+  display: grid;
+  justify-items: end;
+  text-align: right;
+  color: var(--accent);
+}
+
+/* The figure slides up out of a mask; its value is always the real one. */
+.q__mask {
+  display: block;
+  overflow: hidden;
+  padding-top: 0.04em;
+}
+
+.q__mask .num {
+  display: block;
+  font-family: var(--sans);
+  font-size: clamp(64px, 8vw, 136px);
+  font-weight: 500;
+  line-height: 0.88;
+  letter-spacing: -0.06em;
+}
+
+.q__fig > span:last-child {
+  font-size: 14px;
+  color: var(--muted);
+  margin-top: 10px;
+}
+
+/* Import a report */
+.report {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: clamp(32px, 6vw, 96px);
+  align-items: center;
+  padding: clamp(64px, 10vh, 120px) var(--gutter);
+  border-top: 1px solid var(--hair);
+}
+
+.report__copy {
+  display: grid;
+  gap: 18px;
+}
+
+.report__copy h2 {
+  font-size: clamp(36px, 4.6vw, 76px);
+  font-weight: 600;
+  line-height: 0.98;
+  letter-spacing: -0.045em;
+}
+
+.report__copy p {
+  max-width: 42ch;
+  color: var(--muted);
+  font-size: clamp(16px, 1.25vw, 18px);
+}
+
+.report__copy .report__small {
+  font-size: 14px;
+}
+
+.report__drop {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 420px;
+  padding: 32px;
+  border: 0;
+  border-radius: var(--panel-r);
+  background: var(--paper-2);
+  box-shadow: inset 0 0 0 1.5px var(--hair);
+  overflow: hidden;
+  isolation: isolate;
+  text-align: center;
+  cursor: pointer;
+  transition: box-shadow 0.4s, transform 0.6s var(--ease-out);
+}
+
+.report__drop:active {
+  transform: scale(0.99);
+}
+
+.report__drop.is-over {
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+/* A soft light follows the cursor across the panel. */
+.report__drop::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(360px circle at var(--sx, 50%) var(--sy, 50%), color-mix(in srgb, var(--accent) 10%, transparent), transparent 70%);
+  opacity: 0;
+  transition: opacity 0.6s var(--ease-out);
+  pointer-events: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .report__drop:hover::before {
+    opacity: 1;
+  }
+}
+
+.report__canvas {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  width: 100%;
+  height: 100%;
+}
+
+.report__ui {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  max-width: 380px;
+}
+
+.report__icon {
+  display: grid;
+  place-items: center;
+  width: 60px;
+  height: 60px;
+  margin-bottom: 6px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--paper);
+  transition: transform 0.6s var(--ease-out);
+}
+
+.report__drop.is-over .report__icon {
+  transform: translateY(-6px) scale(1.06);
+}
+
+.report__icon svg {
+  width: 26px;
+  height: 26px;
+}
+
+.report__title {
+  font-size: clamp(22px, 2.4vw, 32px);
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  line-height: 1.1;
+}
+
+.report__body {
+  font-size: 15px;
+  color: var(--muted);
+  --inv: rgb(244 244 242 / 0.86);
+}
+
+.report__drop[data-state='error'] .report__body {
+  color: var(--danger);
+}
+
+/* Try it */
+.try {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: clamp(32px, 6vw, 96px);
+  align-items: stretch;
+  padding: clamp(64px, 10vh, 120px) var(--gutter);
+}
+
+.try__copy {
+  display: grid;
+  align-content: start;
+  gap: 18px;
+}
+
+.try__copy h2 {
+  font-size: clamp(36px, 4.6vw, 76px);
+  font-weight: 600;
+  line-height: 0.98;
+  letter-spacing: -0.045em;
+}
+
+.try__copy > p {
+  color: var(--muted);
+  max-width: 36ch;
+  margin-bottom: 18px;
+}
+
+.field {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 14px 0 0;
+  border: 0;
+  border-top: 1px solid var(--hair);
+}
+
+.field label,
+.field legend {
+  font-size: 13px;
+  color: var(--muted);
+  padding: 0;
+}
+
+.field legend {
+  float: left;
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.stepper input {
+  width: 4.2ch;
+  border: 0;
+  background: none;
+  font-size: 40px !important;
+  font-weight: 500;
+  line-height: 1;
+  text-align: center;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.stepper input::-webkit-inner-spin-button,
+.stepper input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.seg {
+  clear: both;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.seg label {
+  position: relative;
+  cursor: pointer;
+}
+
+.vessel {
+  position: relative;
+  min-height: 520px;
+  border-radius: var(--panel-r);
+  background: var(--paper-2);
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.vessel__canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.vessel__read {
+  position: absolute;
+  left: clamp(20px, 3vw, 40px);
+  top: clamp(20px, 3vw, 40px);
+  right: clamp(20px, 3vw, 40px);
+}
+
+.vessel__read .invert-a,
+.vessel__read .invert-b {
+  display: grid;
+}
+
+.vessel__pre,
+.vessel__post {
+  font-size: clamp(20px, 2vw, 30px);
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+.vessel__big {
+  font-family: var(--sans);
+  font-size: clamp(96px, 12vw, 200px);
+  font-weight: 500;
+  line-height: 0.9;
+  letter-spacing: -0.07em;
+}
+
+.vessel__pct {
+  position: absolute;
+  left: clamp(20px, 3vw, 40px);
+  bottom: clamp(18px, 2.6vw, 32px);
+  font-size: 14px;
+  --inv: rgb(244 244 242 / 0.86);
+}
+
+/* Maths */
+.maths {
+  display: grid;
+  justify-items: center;
+  text-align: center;
+  gap: 28px;
+  padding: clamp(96px, 16vh, 200px) var(--gutter);
+}
+
+.maths h2 {
+  font-size: clamp(36px, 5.2vw, 88px);
+  font-weight: 600;
+  line-height: 0.98;
+  letter-spacing: -0.045em;
+}
+
+.formulas {
+  display: grid;
+  gap: 8px;
+  margin: 24px 0 8px;
+  font-size: clamp(18px, 3.3vw, 52px);
+  letter-spacing: -0.03em;
+  color: var(--accent-ink);
+}
+
+.js .formulas .char {
+  opacity: 0.14;
+}
+
+.maths__key {
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.maths__key .num {
+  color: var(--ink);
+}
+
+.maths__body {
+  max-width: 56ch;
+  color: var(--muted);
+  font-size: clamp(16px, 1.25vw, 19px);
+}
+
+/* End */
+.end {
+  position: relative;
+  padding: clamp(64px, 10vh, 120px) 0 calc(28px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--hair);
+}
+
+.end__top {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 32px;
+  padding: 0 var(--gutter);
+}
+
+.end__top h2 {
+  font-size: clamp(32px, 4vw, 64px);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.045em;
+  max-width: 16ch;
+}
+
+.end__mark {
+  position: relative;
+  margin: clamp(48px, 8vh, 96px) 0 20px;
+  font-size: 22.6vw;
+  font-weight: 600;
+  line-height: 0.8;
+  letter-spacing: -0.065em;
+  text-align: center;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.end__ink,
+.end__fill {
+  display: block;
+  padding: 0.04em 0 0.02em;
+}
+
+.end__ink {
+  color: var(--ink);
+  opacity: 0.08;
+}
+
+.end__fill {
+  position: absolute;
+  inset: 0;
+  color: var(--accent);
+  clip-path: inset(var(--fill-top, 100%) 0 0 0);
+}
+
+.end__line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 28%;
+  height: 1.5px;
+  background: var(--ink);
+  transform-origin: left;
+  transform: scaleX(var(--line-s, 0));
+}
+
+.end__foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 6px 24px;
+  padding: 0 var(--gutter);
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* Short landscape screens: keep the readout small so the water stays clear of it. */
+@media (max-height: 620px) {
+  .hud__row {
+    display: none;
+  }
+
+  .hud__pct {
+    font-size: 36px;
+  }
+}
+
+/* Phones and small tablets */
+@media (max-width: 767px) {
+  .nav {
+    height: calc(60px + env(safe-area-inset-top, 0px));
+  }
+
+  .nav__mark {
+    font-size: 19px;
+  }
+
+  .nav__right {
+    gap: 8px;
+  }
+
+  .hud {
+    top: calc(76px + env(safe-area-inset-top, 0px));
+  }
+
+  .hud__row {
+    font-size: 12px;
+  }
+
+  .hud__state {
+    font-size: 13px;
+  }
+
+  .rule__btn > span:first-child {
+    display: none;
+  }
+
+  .hero__title {
+    font-size: clamp(44px, 13.6vw, 84px);
+  }
+
+  .hero__below {
+    gap: 22px;
+  }
+
+  .hero__cta {
+    gap: 20px;
+  }
+
+  /* Start the copy below the readout, which sits top right on phones. */
+  .beat {
+    padding-top: 34svh;
+  }
+
+  .beat--b .beat__copy,
+  .beat--c .beat__copy {
+    margin: 0;
+  }
+
+  .q {
+    grid-template-columns: 1fr auto;
+    grid-template-areas: 'ask fig' 'body body';
+    gap: 14px 20px;
+  }
+
+  .q__ask {
+    grid-area: ask;
+  }
+
+  .q__fig {
+    grid-area: fig;
+  }
+
+  .q__body {
+    grid-area: body;
+  }
+
+  .report,
+  .try {
+    grid-template-columns: 1fr;
+  }
+
+  .report__drop {
+    min-height: 320px;
+  }
+
+  .vessel {
+    min-height: 420px;
+  }
+
+  .end__top {
+    flex-direction: column;
+    align-items: start;
+  }
+}

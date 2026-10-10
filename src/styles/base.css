@@ -1,0 +1,554 @@
+@import '@fontsource-variable/geist';
+@import '@fontsource-variable/geist-mono';
+
+/* Tokens. One accent (cobalt, the liquid). Vermilion is reserved for the
+   "below the line" state only. Shape rule: interactive controls are pills,
+   panels are 20px, everything structural is square.
+
+   Theme: an inline script in <head> sets data-theme before first paint. The
+   media-query block is the no-JavaScript fallback. */
+:root {
+  --paper: #f1f1ee;
+  --paper-2: #e7e7e3;
+  --paper-3: #dcdcd7;
+  --ink: #101113;
+  --muted: #5c5e64;
+  --hair: rgb(16 17 19 / 0.12);
+  --accent: #2e33f0;
+  --accent-ink: #2328c9;
+  --accent-soft: rgb(46 51 240 / 0.1);
+  --on-accent: #f4f4f2;
+  --danger: #d23d1c;
+  --danger-soft: rgb(210 61 28 / 0.1);
+  --shadow: rgb(16 17 19 / 0.14);
+
+  --sans: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
+  --mono: 'Geist Mono Variable', ui-monospace, 'SFMono-Regular', monospace;
+
+  --gutter: clamp(16px, 4vw, 56px);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-io: cubic-bezier(0.65, 0, 0.35, 1);
+  --panel-r: 20px;
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --paper: #0e0f11;
+    --paper-2: #17181b;
+    --paper-3: #222328;
+    --ink: #ececea;
+    --muted: #9a9ca3;
+    --hair: rgb(236 236 234 / 0.12);
+    --accent: #3a40f5;
+    --accent-ink: #9a9eff;
+    --accent-soft: rgb(90 96 255 / 0.16);
+    --danger: #ff6a47;
+    --danger-soft: rgb(255 106 71 / 0.14);
+    --shadow: rgb(0 0 0 / 0.5);
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme='dark'] {
+  --paper: #0e0f11;
+  --paper-2: #17181b;
+  --paper-3: #222328;
+  --ink: #ececea;
+  --muted: #9a9ca3;
+  --hair: rgb(236 236 234 / 0.12);
+  --accent: #3a40f5;
+  --accent-ink: #9a9eff;
+  --accent-soft: rgb(90 96 255 / 0.16);
+  --danger: #ff6a47;
+  --danger-soft: rgb(255 106 71 / 0.14);
+  --shadow: rgb(0 0 0 / 0.5);
+  color-scheme: dark;
+}
+
+/* Theme switch: no default fade; theme.js animates the new page's clip-path. */
+.theme-flooding::view-transition-old(root),
+.theme-flooding::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* Components set their own display; the hidden attribute must still win. */
+[hidden] {
+  display: none !important;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.5;
+  font-feature-settings: 'ss01', 'cv11';
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+a {
+  color: inherit;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+/* Controls: instant taps, no text selection or callouts on long-press. */
+button,
+a,
+label,
+select,
+[role='button'] {
+  touch-action: manipulation;
+}
+
+button,
+[role='button'],
+.btn,
+.chip {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* iOS zooms into any field under 16px and never zooms back. */
+@media (pointer: coarse) {
+  input,
+  select,
+  textarea {
+    font-size: max(16px, 1em) !important;
+  }
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.num {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Wordmark: the mark, then the name. */
+.wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42em;
+  color: var(--ink);
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  text-decoration: none;
+  line-height: 1;
+}
+
+.wordmark__mark {
+  flex: none;
+  width: 1.2em;
+  height: 1.2em;
+  transition: transform 0.6s var(--ease-out);
+}
+
+/* On a dark page the mark's ink tile needs an edge. */
+:root[data-theme='dark'] .wordmark__mark {
+  border-radius: 23%;
+  box-shadow: 0 0 0 1px var(--hair);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .wordmark:hover .wordmark__mark {
+    transform: rotate(-8deg) scale(1.06);
+  }
+}
+
+/* Magnetic elements lean toward a nearby cursor (magnet.js sets the offsets).
+   The translate property composes with transform, so press feedback still works. */
+[data-magnet],
+[data-magnet-inner] {
+  translate: calc(var(--mx, 0) * 1px) calc(var(--my, 0) * 1px);
+}
+
+/* Buttons. Pills, one line, press feedback on press (not release). Hover
+   cross-fades to the fill colour and a soft glow follows the cursor inside. */
+.btn {
+  --bg: var(--ink);
+  --fg: var(--paper);
+  --fill: var(--accent);
+  --fill-fg: var(--on-accent);
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 48px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--fg);
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+  overflow: hidden;
+  isolation: isolate;
+  transition: transform 0.16s var(--ease-out), background-color 0.45s var(--ease-out), color 0.45s var(--ease-out), box-shadow 0.45s var(--ease-out);
+}
+
+.btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(90px circle at var(--px, 50%) var(--py, 50%), color-mix(in srgb, var(--fill-fg) 24%, transparent), transparent 72%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.45s var(--ease-out);
+}
+
+.btn svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  transition: transform 0.6s var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .btn:hover {
+    background-color: var(--fill);
+    color: var(--fill-fg);
+  }
+  .btn:hover::after {
+    opacity: 1;
+  }
+  .btn:hover svg:last-child:not(:first-child) {
+    transform: translateX(3px);
+  }
+}
+
+.btn:active {
+  transform: scale(0.97);
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+  pointer-events: none;
+}
+
+.btn--ghost {
+  --bg: transparent;
+  --fg: var(--ink);
+  --fill: var(--accent-soft);
+  --fill-fg: var(--accent-ink);
+  box-shadow: inset 0 0 0 1px var(--hair);
+}
+
+/* On the cobalt water: hover turns paper, never cobalt, so the button cannot vanish. */
+.btn--float {
+  --fill: var(--paper);
+  --fill-fg: var(--ink);
+}
+
+.btn--accent {
+  --bg: var(--accent);
+  --fg: var(--on-accent);
+  --fill: var(--ink);
+  --fill-fg: var(--paper);
+}
+
+.btn--soft {
+  --bg: var(--accent-soft);
+  --fg: var(--accent-ink);
+  --fill: var(--accent);
+  --fill-fg: var(--on-accent);
+}
+
+.btn--sm {
+  height: 38px;
+  padding: 0 16px;
+  font-size: 14px;
+  gap: 8px;
+}
+
+.btn--icon {
+  width: 38px;
+  height: 38px;
+  padding: 0;
+}
+
+.btn--icon.btn--sm {
+  width: 32px;
+  height: 32px;
+}
+
+/* Theme toggle: sun and moon swap with a turn. */
+.theme-btn {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--hair);
+  color: var(--ink);
+  cursor: pointer;
+  transition: transform 0.16s var(--ease-out), background-color 0.3s;
+}
+
+.theme-btn:active {
+  transform: scale(0.94);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .theme-btn:hover {
+    background: var(--accent-soft);
+  }
+}
+
+.theme-btn__icon {
+  grid-area: 1 / 1;
+  display: grid;
+  transition: transform 0.7s var(--ease-out), opacity 0.4s;
+}
+
+.theme-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.theme-btn__moon {
+  opacity: 0;
+  transform: rotate(-90deg) scale(0.6);
+}
+
+:root[data-theme='dark'] .theme-btn__sun {
+  opacity: 0;
+  transform: rotate(90deg) scale(0.6);
+}
+
+:root[data-theme='dark'] .theme-btn__moon {
+  opacity: 1;
+  transform: none;
+}
+
+/* Chips: small pill choices (presets, filters). */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--hair);
+  color: var(--ink);
+  font-size: 14px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.35s var(--ease-out), color 0.35s var(--ease-out), box-shadow 0.35s, transform 0.16s var(--ease-out);
+}
+
+.chip:active {
+  transform: scale(0.96);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .chip:hover {
+    background: var(--accent-soft);
+  }
+}
+
+.chip[aria-pressed='true'],
+.chip[aria-checked='true'],
+input:checked + .chip {
+  background: var(--ink);
+  color: var(--paper);
+  box-shadow: none;
+}
+
+input:focus-visible + .chip {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+/* Native dialogs as panels (desktop) and bottom sheets (phones). */
+.sheet {
+  width: min(560px, calc(100vw - 32px));
+  max-height: min(86dvh, 820px);
+  margin: auto;
+  padding: 0;
+  border: 0;
+  border-radius: var(--panel-r);
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 0 30px 90px var(--shadow), 0 0 0 1px var(--hair);
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+
+.sheet[open] {
+  display: flex;
+  flex-direction: column;
+  animation: sheet-in 0.55s var(--ease-out);
+}
+
+.sheet::backdrop {
+  background: rgb(10 11 13 / 0.4);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: fade-in 0.4s var(--ease-out);
+}
+
+.sheet.is-closing {
+  animation: sheet-out 0.32s var(--ease-io) forwards;
+}
+
+.sheet.is-closing::backdrop {
+  animation: fade-out 0.32s var(--ease-io) forwards;
+}
+
+.sheet__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 22px 24px 14px;
+}
+
+.sheet__title {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+
+.sheet__body {
+  padding: 4px 24px 24px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.sheet__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 24px calc(18px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--hair);
+}
+
+@keyframes sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.98);
+  }
+}
+
+@keyframes sheet-out {
+  to {
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .sheet {
+    width: 100vw;
+    max-width: 100vw;
+    max-height: 92dvh;
+    margin: auto 0 0;
+    border-radius: var(--panel-r) var(--panel-r) 0 0;
+  }
+
+  .sheet[open] {
+    animation-name: sheet-up;
+  }
+
+  .sheet.is-closing {
+    animation-name: sheet-down;
+  }
+
+  @keyframes sheet-up {
+    from {
+      transform: translateY(100%);
+    }
+  }
+
+  @keyframes sheet-down {
+    to {
+      transform: translateY(100%);
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}

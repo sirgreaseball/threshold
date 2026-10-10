@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Threshold</title>
+    <meta name="description" content="Drop in your attendance report and see, for every course, how many classes you can miss before your college's minimum." />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#f1f1ee" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0e0f11" media="(prefers-color-scheme: dark)" />
+    <meta property="og:title" content="Threshold" />
+    <meta property="og:description" content="How many classes can you miss before the line? Threshold works it out for every course." />
+    <meta property="og:image" content="https://stayabove.vercel.app/og.png" />
+    <meta property="og:url" content="https://stayabove.vercel.app/" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32" />
+    <link rel="apple-touch-icon" href="/icon-180.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <script>
+      (function () {
+        var t = null;
+        try { t = localStorage.getItem('threshold.theme'); } catch (e) {}
+        var d = document.documentElement;
+        d.dataset.theme = t || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        d.classList.add('js');
+      })();
+    </script>
+    <script type="module" src="/src/landing.js"></script>
+  </head>
+  <body class="landing">
+    <header class="nav">
+      <a class="wordmark nav__mark" href="/" aria-label="Threshold home" data-magnet="0.18"><svg class="wordmark__mark" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><clipPath id="tm-clip"><rect width="64" height="64" rx="15"/></clipPath><g clip-path="url(#tm-clip)"><rect width="64" height="64" fill="#101113"/><path fill="#2e33f0" d="M0 25.5C10 21 21 21 32 24.8S54 28.6 64 24.4V64H0Z"/><rect y="38" width="64" height="5.5" fill="#f4f4f2"/></g></svg><span>Threshold</span></a>
+      <div class="nav__right">
+        <button class="theme-btn" id="theme-btn" data-magnet="0.35"></button>
+        <a class="btn btn--sm" href="/app/#start" data-magnet="0.3">Open planner <i data-icon="arrow"></i></a>
+      </div>
+    </header>
+
+    <main>
+      <section class="stage" aria-label="How attendance moves">
+        <div class="stage__sticky">
+          <canvas class="stage__canvas" aria-hidden="true"></canvas>
+          <div class="hud">
+            <span class="hud__pct num" aria-hidden="true">84.2%</span>
+            <span class="hud__row num"><span class="hud__a">32</span> of <span class="hud__t">38</span> attended</span>
+            <span class="hud__state">You can miss 4 more</span>
+            <div class="rule">
+              <button type="button" class="rule__btn" id="rule-btn" aria-expanded="false" aria-controls="rule-pop" data-magnet="0.25">
+                <span>Your minimum</span>
+                <span class="rule__val num" data-story="P%">75%</span>
+                <i data-icon="caret"></i>
+              </button>
+              <div class="rule__pop" id="rule-pop" role="group" aria-label="Choose your college's minimum attendance">
+                <div class="rule__chips" id="rule-chips"></div>
+                <label class="rule__other">
+                  <span>Other</span>
+                  <input type="number" inputmode="numeric" min="50" max="95" id="rule-other" class="num" aria-label="Another minimum, in percent" />
+                  <span>%</span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="beats">
+          <div class="beat beat--hero">
+            <h1 class="hero__title" data-invert>
+              <span class="line"><span>Stay above</span></span>
+              <span class="line"><span>the line.</span></span>
+            </h1>
+            <div class="hero__below">
+              <p class="hero__sub" data-invert>
+                Threshold tracks attendance for every course and tells you exactly how many classes you can miss before
+                <span data-story="P%">75%</span>.
+              </p>
+              <div class="hero__cta">
+                <a class="btn btn--float" href="/app/#start" data-magnet="0.32">Open planner <i data-icon="arrow"></i></a>
+                <a class="hero__link" href="#report" data-invert>Import my report</a>
+              </div>
+            </div>
+          </div>
+
+          <div class="beat beat--a">
+            <div class="beat__copy">
+              <h2 data-invert>Every class you skip lowers the level.</h2>
+              <p data-invert data-story="beatA">32 of 38 is 84.2%. Skip four and you are at 76.1%, one class from the line.</p>
+            </div>
+          </div>
+
+          <div class="beat beat--b">
+            <div class="beat__copy">
+              <h2 data-invert>Keep skipping and you sink fast.</h2>
+              <p data-invert data-story="beatB">At 32 of 46 you need ten classes in a row to climb back. Most people find out from the shortage list.</p>
+            </div>
+          </div>
+
+          <div class="beat beat--c">
+            <div class="beat__copy">
+              <h2 data-invert>Threshold tells you first.</h2>
+              <p data-invert data-story="beatC">Ten straight classes later you are back at exactly 75%. Every course, every day, at a glance.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="qs" aria-labelledby="qs-title">
+        <h2 class="qs__title" id="qs-title" data-split>Three questions, answered for every course.</h2>
+        <ol class="qs__list">
+          <li class="q">
+            <h3 class="q__ask" data-split>How many can I miss?</h3>
+            <p class="q__body">Your spare classes in every course, against whatever minimum your college sets.</p>
+            <p class="q__fig"><span class="q__mask"><span class="num" data-story="k1">4</span></span><span>classes to spare</span></p>
+          </li>
+          <li class="q">
+            <h3 class="q__ask" data-split>How do I get back?</h3>
+            <p class="q__body">Below the line, Threshold counts the classes you need without a single miss.</p>
+            <p class="q__fig"><span class="q__mask"><span class="num" data-story="n">10</span></span><span>in a row</span></p>
+          </li>
+          <li class="q">
+            <h3 class="q__ask" data-split>Will I make it to the last class?</h3>
+            <p class="q__body">It estimates the classes still to come from your pace so far or your credits, then works out what is still possible.</p>
+            <p class="q__fig"><span class="q__mask"><span class="num" data-story="skip30">12</span></span><span>of the next 30 to skip</span></p>
+          </li>
+        </ol>
+      </section>
+
+      <section class="report" id="report" aria-labelledby="report-title">
+        <div class="report__copy">
+          <h2 id="report-title" data-split>Start from the sheet you already get.</h2>
+          <p>
+            Drop in the attendance report from your college portal. Threshold reads every course, its theory and practical
+            rows and your college's minimum, right here on this device.
+          </p>
+          <p class="report__small">Works with PDF reports and with tables copied from a portal or a spreadsheet.</p>
+        </div>
+        <button type="button" class="report__drop" id="report-drop" aria-describedby="report-status" data-spot>
+          <canvas class="report__canvas" aria-hidden="true"></canvas>
+          <span class="report__ui">
+            <span class="report__icon" data-magnet="0.4"><i data-icon="file"></i></span>
+            <span class="report__title" data-invert id="report-title-text">Drop your PDF here</span>
+            <span class="report__body" data-invert id="report-status">Or tap to choose it. It never leaves this device.</span>
+          </span>
+        </button>
+        <input type="file" id="report-file" accept="application/pdf,.pdf,.txt,.csv,.tsv,text/plain,text/csv" hidden />
+      </section>
+
+      <section class="try" id="try" aria-labelledby="try-title">
+        <div class="try__copy">
+          <h2 id="try-title" data-split>Try it on one course.</h2>
+          <p>Change the numbers. The answer and the level move as you type.</p>
+
+          <div class="field">
+            <label for="try-a">Attended</label>
+            <div class="stepper">
+              <button type="button" class="btn btn--ghost btn--icon" data-step="a:-1" aria-label="One fewer attended"><i data-icon="minus"></i></button>
+              <input id="try-a" class="num" type="number" inputmode="numeric" min="0" value="32" />
+              <button type="button" class="btn btn--ghost btn--icon" data-step="a:1" aria-label="One more attended"><i data-icon="plus"></i></button>
+            </div>
+          </div>
+          <div class="field">
+            <label for="try-t">Held</label>
+            <div class="stepper">
+              <button type="button" class="btn btn--ghost btn--icon" data-step="t:-1" aria-label="One fewer held"><i data-icon="minus"></i></button>
+              <input id="try-t" class="num" type="number" inputmode="numeric" min="0" value="38" />
+              <button type="button" class="btn btn--ghost btn--icon" data-step="t:1" aria-label="One more held"><i data-icon="plus"></i></button>
+            </div>
+          </div>
+          <fieldset class="field">
+            <legend>Minimum</legend>
+            <div class="seg" id="try-seg"></div>
+          </fieldset>
+        </div>
+
+        <div class="vessel">
+          <canvas class="vessel__canvas" aria-hidden="true"></canvas>
+          <div class="vessel__read" data-invert aria-live="polite">
+            <span class="vessel__pre">You can miss</span>
+            <span class="vessel__big num">4</span>
+            <span class="vessel__post">more classes.</span>
+          </div>
+          <span class="vessel__pct num" data-invert><span class="vessel__pct-text">84.2% now, 75% needed</span></span>
+        </div>
+      </section>
+
+      <section class="maths" id="maths" aria-labelledby="maths-title">
+        <h2 id="maths-title" data-split>Whole numbers, no guessing.</h2>
+        <div class="formulas num" aria-label="Formulas">
+          <p data-chars>miss = ⌊(100a − P·t) ÷ P⌋</p>
+          <p data-chars>need = ⌈(P·t − 100a) ÷ (100 − P)⌉</p>
+        </div>
+        <p class="maths__key"><span class="num">a</span> attended, <span class="num">t</span> held, <span class="num">P</span> minimum percent.</p>
+        <p class="maths__body">
+          Most calculators divide by 0.8 and round. For an 80% minimum that gives the wrong answer in 2,614 of 3,320 cases up
+          to 80 classes. Threshold keeps every step in whole numbers and checks itself against a brute-force count.
+        </p>
+      </section>
+
+      <section class="end" aria-labelledby="end-title">
+        <div class="end__top">
+          <h2 id="end-title" data-split>Set it up once. Check it before you skip.</h2>
+          <a class="btn btn--accent" href="/app/#start" data-magnet="0.32">Open planner <i data-icon="arrow"></i></a>
+        </div>
+        <div class="end__mark" aria-hidden="true">
+          <span class="end__ink">Threshold</span>
+          <span class="end__fill">Threshold</span>
+          <span class="end__line"></span>
+        </div>
+        <footer class="end__foot">
+          <p>&copy; 2026 Dhruv Sonar. All rights reserved.</p>
+          <p>Your data stays in this browser. Built with Claude Code.</p>
+        </footer>
+      </section>
+    </main>
+  </body>
+</html>

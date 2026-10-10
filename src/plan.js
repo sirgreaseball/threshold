@@ -1,0 +1,221 @@
+// Course-level planning on top of core.js: courses made of parts (theory,
+// practical, tutorial, studio), college rules, semester dates, and estimates of
+// how many classes are still to come. Pure functions; no DOM.
+
+import { percent, canMiss, mustAttend, status, forecast } from './core.js';
+
+export const KINDS = ['Theory', 'Practical', 'Tutorial', 'Studio'];
+const LAB = new Set(['Practical', 'Studio']);
+export const isLab = (kind) => LAB.has(kind);
+
+const DAY = 86400000;
+
+/** 'YYYY-MM-DD' to a local-midnight Date, or null if missing or invalid. */
+export function parseDate(s) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s || '')) return null;
+  const [y, m, d] = s.split('-').map(Number);
+  const dt = new Date(y, m - 1, d);
+  return dt.getFullYear() === y && dt.getMonth() === m - 1 && dt.getDate() === d ? dt : null;
+}
+
+export function isoDate(d) {
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+/** Whole days from a to b. Rounded, so a daylight-saving hour never loses a day. */
+export const daysBetween = (a, b) => Math.round((b - a) / DAY);
+
+export const startOfDay = (d = new Date()) => {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  return x;
+};
+
+export function sumParts(parts) {
+  let attended = 0;
+  let conducted = 0;
+  for (const p of parts) {
+    attended += p.attended;
+    conducted += p.conducted;
+  }
+  return { attended, conducted };
+}
+
+/**
+ * The minimum that applies. A course's own minimum wins; in "separate" mode a
+ * lab-type part can have its own minimum; otherwise the college-wide one.
+ */
+export function minFor(rule, course, part) {
+  if (course.min) return course.min;
+  if (part && rule.mode === 'separate' && rule.labMin && isLab(part.kind)) return rule.labMin;
+  return rule.min;
+}
+
+/**
+ * Classes a week for each part, implied by a course's credits. Uses the AICTE
+ * definition: 1 credit = 1 lecture or tutorial hour a week, or 2 lab hours a
+ * week, and treats each hour as one class (that is how most attendance
+ * reports count a two-hour lab). Each lab or tutorial part takes one credit as
+ * long as theory keeps at least one; theory gets the rest.
+ * Returns Map(partId -> classes a week), or null without credits.
+ */
+export function weeklyFromCredits(credits, parts) {
+  if (!(credits > 0) || !parts.length) return null;
+  const labs = parts.filter((p) => isLab(p.kind));
+  const tuts = parts.filter((p) => p.kind === 'Tutorial');
+  const theory = parts.filter((p) => !isLab(p.kind) && p.kind !== 'Tutorial');
+  const out = new Map();
+  if (!theory.length && !tuts.length) {
+    labs.forEach((p) => out.set(p.id, (2 * credits) / labs.length));
+    return out;
+  }
+  let left = credits;
+  for (const p of [...labs, ...tuts]) {
+    const cost = 1;
+    const ok = !theory.length || left - cost >= 1;
+    out.set(p.id, ok ? (isLab(p.kind) ? 2 : 1) : 0);
+    if (ok) left -= cost;
+  }
+  theory.forEach((p) => out.set(p.id, Math.max(0, left) / theory.length));
+  return out;
+}
+
+/** How a course's classes-left estimate is made, in the order "auto" tries them. */
+export const PLAN_MODES = ['auto', 'credits', 'weekly', 'total'];
+
+/**
+ * Classes still to come for each part of a course.
+ * term: { start, end, asOf } as 'YYYY-MM-DD' strings ('' when unknown).
+ * Returns { total, byPart: Map, source, reason } where source is one of
+ * 'pace' | 'credits' | 'weekly' | 'total' and total is null when unknown.
+ */
+export function classesLeft(course, term, today = new Date()) {
+  const start = parseDate(term.start);
+  const end = parseDate(term.end);
+  const asOf = parseDate(term.asOf) || startOfDay(today);
+  const mode = course.plan || 'auto';
+  const parts = course.parts;
+  const none = (reason) => ({ total: null, byPart: null, source: null, reason });
+
+  if (mode === 'total') {
+    if (!parts.some((p) => p.total > 0)) return none('no-total');
+    const byPart = new Map(parts.map((p) => [p.id, p.total > 0 ? Math.max(0, p.total - p.conducted) : 0]));
+    return done(byPart, 'total');
+  }
+  if (!end) return none('no-end');
+  const weeksLeft = Math.max(0, daysBetween(asOf, end)) / 7;
+
+  const fromWeekly = (weekly, source) =>
+    done(new Map(parts.map((p) => [p.id, Math.round((weekly.get(p.id) || 0) * weeksLeft)])), source);
+
+  const fromCredits = () => {
+    const weekly = weeklyFromCredits(course.credits, parts);
+    if (!weekly) return none('no-credits');
+    if (!start) return fromWeekly(weekly, 'credits');
+    // Credits fix the planned total for the semester; what is left is that minus what has been held.
+    const termWeeks = Math.max(0, daysBetween(start, end)) / 7;
+    return done(new Map(parts.map((p) => [p.id, Math.max(0, Math.round((weekly.get(p.id) || 0) * termWeeks) - p.conducted)])), 'credits');
+  };
+
+  if (mode === 'credits') return fromCredits();
+  if (mode === 'weekly') return fromWeekly(new Map(parts.map((p) => [p.id, p.perWeek || 0])), 'weekly');
+
+  // auto: the pace so far is the best guide once there are two weeks of data.
+  const elapsed = start ? daysBetween(start, asOf) : 0;
+  if (start && elapsed >= 14 && parts.some((p) => p.conducted > 0)) {
+    const weeks = elapsed / 7;
+    return done(new Map(parts.map((p) => [p.id, Math.round((p.conducted / weeks) * weeksLeft)])), 'pace');
+  }
+  if (course.credits > 0) return fromCredits();
+  if (parts.some((p) => p.perWeek > 0)) return fromWeekly(new Map(parts.map((p) => [p.id, p.perWeek || 0])), 'weekly');
+  return none(start ? 'too-early' : 'no-start');
+
+  function done(byPart, source) {
+    let total = 0;
+    for (const v of byPart.values()) total += v;
+    return { total, byPart, source, reason: null };
+  }
+}
+
+/** The numbers for one set of counts against one minimum. */
+export function judge(attended, conducted, min, left = null) {
+  const st = status(attended, conducted, min);
+  return {
+    attended,
+    conducted,
+    min,
+    pct: percent(attended, conducted),
+    status: st,
+    miss: st === 'safe' || st === 'edge' ? canMiss(attended, conducted, min) : 0,
+    need: st === 'below' ? mustAttend(attended, conducted, min) : 0,
+    left,
+    end: left == null ? null : forecast(attended, conducted, min, left),
+  };
+}
+
+/** Lower is worse: below the line sorts before on-the-line, which sorts before safe. */
+export function slack(j) {
+  if (j.status === 'empty') return Infinity;
+  if (j.status === 'below') return -1 - (Number.isFinite(j.need) ? j.need : 1e6);
+  return j.miss;
+}
+
+/** Everything the planner shows for one course. */
+export function evaluate(course, rule, term, today = new Date()) {
+  const left = classesLeft(course, term, today);
+  const { attended, conducted } = sumParts(course.parts);
+  if (rule.mode !== 'separate' || course.parts.length < 2) {
+    const j = judge(attended, conducted, minFor(rule, course, course.parts[0]), left.total);
+    return { ...j, mode: 'combined', plan: left, parts: course.parts.map((p) => partView(p, rule, course, left)) };
+  }
+  // Separate: each part must clear its own minimum. The course reads as its worst part.
+  const parts = course.parts.map((p) => partView(p, rule, course, left));
+  const worst = parts.reduce((w, p) => (slack(p.judge) < slack(w.judge) ? p : w));
+  const endWorst = parts
+    .filter((p) => p.judge.end)
+    .reduce((w, p) => (!w || endSlack(p.judge.end) < endSlack(w.judge.end) ? p : w), null);
+  return {
+    ...worst.judge,
+    pct: percent(attended, conducted),
+    attended,
+    conducted,
+    mode: 'separate',
+    worstKind: worst.kind,
+    end: endWorst ? endWorst.judge.end : null,
+    endKind: endWorst ? endWorst.kind : null,
+    left: left.total,
+    plan: left,
+    parts,
+  };
+}
+
+const endSlack = (e) => (e.reachable ? e.maxSkip : -1e6 + e.best);
+
+function partView(p, rule, course, left) {
+  const min = minFor(rule, course, p);
+  return { id: p.id, kind: p.kind, judge: judge(p.attended, p.conducted, min, left.byPart ? left.byPart.get(p.id) ?? 0 : null) };
+}
+
+/** Short label for a course: initials of its main words, or the start of a one-word name. */
+export function shortName(name) {
+  const stop = new Set(['and', 'of', 'in', 'for', 'the', 'to', 'with', 'on', 'a', 'an', '&']);
+  const words = name
+    .replace(/[^\p{L}\p{N}\s&]/gu, ' ')
+    .split(/\s+/)
+    .filter((w) => w && !stop.has(w.toLowerCase()));
+  if (!words.length) return name.slice(0, 3);
+  // Numbers and Roman numerals stay whole ("Mathematics III" -> "M3"); the rest give initials.
+  const roman = { I: 1, II: 2, III: 3, IV: 4, V: 5, VI: 6, VII: 7, VIII: 8, IX: 9, X: 10 };
+  let tail = '';
+  const last = words[words.length - 1];
+  if (words.length > 1 && /^\d+$/.test(last)) tail = words.pop();
+  else if (words.length > 1 && roman[last.toUpperCase()]) tail = String(roman[words.pop().toUpperCase()]);
+  if (words.length === 1) return words[0].slice(0, tail ? 3 : 4) + tail;
+  return (
+    words
+      .slice(0, 4)
+      .map((w) => w[0].toUpperCase())
+      .join('') + tail
+  );
+}
