@@ -303,6 +303,10 @@ Claude Code recorded the intro and the hover frame by frame in Chrome on Windows
 - **Vercel.** A Vercel project, stayabove, builds it from the repo.
 - **Protection setting.** The new project came with Vercel Authentication on every URL except custom domains, which would have put the public site behind a Vercel login. It was switched to standard protection: the public domain is open, and preview builds stay private.
 
+# After launch: feedback rounds
+
+Each note below came after the site was live. Each one shipped as its own release (see CHANGELOG.md).
+
 ## 20. Feedback: the hover effect overshot
 
 My first look at the live site found a problem: with the cursor near the top-right buttons, "Import" slid into the theme toggle. Each magnetic element could lean toward the cursor by about a third of the distance, which is up to about 15 px. Two neighbours 10 px apart leaned into each other.
@@ -358,3 +362,43 @@ Verification:
 - Zero console errors.
 - An overlap sweep ran at 19 scroll positions on 7 screen sizes, from 360x640 to 1440x900. It found zero text-over-HUD collisions.
 - The landing regression and the hover sweep still pass, with 0 overlaps and a largest lean of 2.4 px.
+
+## 23. Feedback: drop the credit line, and a proper repository
+
+My next note:
+- remove "Built with Claude Code" from the bottom of the site, and keep only "Your data stays in the browser, nothing uploaded.";
+- push the project to GitHub with a really good README;
+- keep the dev log and the commits in step with the changes;
+- have no collaborators on the repository except me.
+
+What changed:
+- **Footers.** Both pages now end with the copyright line and "Your data stays in the browser, nothing uploaded." The planner's footer used to say "Saved in this browser only. Nothing is sent anywhere." It now matches the landing page word for word.
+- **README.** The short note became a full project page:
+  - light and dark screenshots, which swap with GitHub's theme through `<picture>`;
+  - the three answers, with a worked example;
+  - the maths as rendered formulas, and the table of where the decimal formula goes wrong;
+  - the import pipeline as a Mermaid diagram;
+  - the rules and credits model;
+  - the planner, the landing story and phones;
+  - design notes, the stack and the page weight;
+  - the project layout, how to run it and the tests;
+  - privacy, how it was made, and the license.
+- **Screenshots.**
+  - A headless Chrome script took them at 2x from the dev server.
+  - They use only the built-in sample semester, so no real attendance data is in the repository.
+  - The script waited for the "Loaded a sample semester" toast to clear, and moved focus off the import prompt's close button, so neither shows.
+  - They were resized to 1600 px wide, given rounded corners and saved to `docs/media/`, about 3 MB in all.
+- **package.json** is now `private` and `UNLICENSED`, with an author. That matches "All rights reserved". It used to say ISC, a permissive open-source license.
+- **CHANGELOG.md** lists every release since launch with its commits and its dev log section. It ends with a short routine for adding the next release.
+- **Tags.** The git history is tagged with the release versions:
+  - v1.0.0: launch;
+  - v1.0.1: the hover fix;
+  - v1.1.0: the landing page that explains itself;
+  - v1.2.0: answers that follow Try it, the frosted nav, and text kept clear of the readout;
+  - v1.2.1: this release.
+
+Collaborators, checked through the GitHub API before pushing:
+- The repository is private.
+- Its only collaborator is the owner (admin), and there are no pending invitations.
+- Every commit is authored by me, with no co-author trailers, so GitHub lists a single contributor.
+- Vercel's GitHub app can read the repository, because it deploys every push. It is an app installation, not a collaborator.
