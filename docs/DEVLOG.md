@@ -261,3 +261,45 @@ On my real report it found all 8 courses (13 rows), the 80% rule and the dates. 
 - **Real data beat assumptions.** The NMIMS sheet changed the whole data model (courses with parts, combined percentages). A generic attendance calculator would have got this wrong.
 - **It still ships bugs, and its own testing catches most of them.** Three of the round-2 bugs were logic bugs, not visual ones: the shared date, the rounding mismatch and the paste misdetection. All three were caught by reading its own outputs critically or by a test, not by me.
 - **Knowing when to stop.** It spent a long, systematic bisect on a browser quirk, then removed the feature rather than ship a flaky one, and recorded the dead end honestly here.
+
+---
+
+# Round 3: launch polish and deploy
+
+My third brief:
+- fix a "very weird animation" on the splash page's "Open planner" button on Windows;
+- add an all-rights-reserved line to both pages;
+- show an import prompt as soon as the planner opens, with a close button and "Browse files";
+- replace "miss up to" and "skip up to" with plain numbers on the collapsed rows: classes left, how many you must attend, how many you can skip;
+- make things react to the cursor the way lusion.co does;
+- make a logo that is visible in the browser tab, with the tab reading "Threshold";
+- pick a cool name that is actually free, and deploy on Vercel.
+
+## 17. What the weird animation was
+
+Claude Code recorded the intro and the hover frame by frame in Chrome on Windows (at 125% display scaling) and found two things:
+- **The hover.** It slid a cobalt fill up through the dark pill, leaving a dark crescent across the top. On the hero, the pill then turned cobalt on cobalt water and all but vanished. Buttons now cross-fade to their hover colour, with a soft glow that follows the cursor inside the pill. The hero button turns paper on hover, so it can never disappear into the water.
+- **The intro.** The 75% line flashed vermilion for the first second, because the water starts below the line while it fills. The line now stays neutral until the intro finishes.
+
+## 18. Changes
+
+- **Plain numbers.** Each collapsed course row shows three numbers: **Classes left**, **You must attend** and **You can skip**. Must attend + can skip = classes left. A short flag such as "below 80% right now" appears only when it matters. Without an end date the planner assumes 16 weeks from the start, shows that date as provisional, and asks for the real one.
+- **Welcome import prompt.** "Open planner" on the landing page opens the planner with "Import your attendance report?", a drop zone, "Browse files" and a close button. It only appears while the planner is empty and does not come back on reload.
+- **Cursor-aware details**, all mouse-only and all off with reduced motion:
+  - Buttons, the theme toggle, the rule pill and the chevrons lean toward a nearby cursor and spring back.
+  - A soft light follows the cursor across course rows, the tank panel and the drop zone.
+  - Row meters thicken and the three numbers lift one after another.
+  - In the tank chart, tanks near the cursor swell like a dock, their labels grow with them, and the water lifts toward the pointer, then settles with a ripple.
+- **Logo.** An ink tile with cobalt water and a white threshold line through it, as SVG plus PNGs at 32, 180, 192 and 512 px and a maskable icon. It was checked on light and dark tab strips at 16 px. Both pages are now titled "Threshold".
+- **Footer.** "© 2026 Dhruv Sonar. All rights reserved." on both pages.
+
+## 19. Name and deploy
+
+- **Name.** Claude Code checked about 45 vercel.app names over HTTP (a free name answers 404 DEPLOYMENT_NOT_FOUND).
+  - Taken: threshold, thresh, getthreshold, usethreshold, trythreshold, abovetheline, waterline, meniscus and most other obvious names.
+  - Free: stayabove, abovethreshold, onthreshold, keepabove, skipsafe and a few more.
+  - Chosen: **stayabove**, which echoes the headline "Stay above the line".
+- **Code.** Pushed to a private GitHub repo, sirgreaseball/threshold.
+- **Vercel.** A Vercel project, stayabove, builds it from the repo.
+- **Protection setting.** The new project came with Vercel Authentication on every URL except custom domains, which would have put the public site behind a Vercel login. It was switched to standard protection: the public domain is open, and preview builds stay private.
+

@@ -7,6 +7,8 @@ Attendance planner for colleges with a minimum attendance rule (75%, 80%, 85% or
 
 Drop in the attendance report PDF from your college portal and it reads the courses, their theory and practical rows, and the minimum. Everything runs in the browser, and nothing is uploaded.
 
+Live at **https://stayabove.vercel.app**.
+
 Built with Claude Code for the "Playing with AI" project. The full process log is in [docs/DEVLOG.md](docs/DEVLOG.md).
 
 ## Run
