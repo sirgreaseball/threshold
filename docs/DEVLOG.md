@@ -313,5 +313,16 @@ The fix:
 - The row lifts went from 3 px to 2 px.
 - The button clusters got 12 px gaps.
 
-An automated sweep moved the cursor around every magnetic element and checked every pair for overlap. The result: no overlaps; the largest lean is 2.4 px; the tightest pair keeps 7.4 px of space, where before they touched.
+An automated sweep moved the cursor around every magnetic element and checked every pair for overlap.
+
+## 21. Feedback: make the splash page make sense
+
+My next note: the readout ("84.2%, 32 of 38 attended, you can miss 4 more") reads like someone's personal data to a first-time visitor who has entered nothing. The question figures ("4 classes to spare", "13 in a row", "9 of 30") came out of nowhere.
+
+What changed:
+- **The readout is labelled "Example course".** It now shows a track with one mark per class in the story: outlined for missed, filled for attended, faint for still to come. A small key explains the marks. The track fills in as you scroll, so it doubles as the story's progress bar.
+- **Readout wording.** "4 classes to spare", "No classes to spare", "Attend the next 10 in a row", "Back at 75%".
+- **The story copy introduces the example.** "Take one course: 32 of 38 classes attended, 84.2%..." Every number is generated for whichever minimum is chosen.
+- **"Try it on one course" moved up** to sit right after the story. Its numbers start from the example course until you edit them.
+- **The three questions now answer for that same example**, with the numbers in the sentence. For instance, "From 32 of 38, with 30 classes left, the example can skip 11 and still finish at 75%". The third question became "Will I end the semester above it?" The result: no overlaps; the largest lean is 2.4 px; the tightest pair keeps 7.4 px of space, where before they touched.
 

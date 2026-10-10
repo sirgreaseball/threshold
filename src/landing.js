@@ -88,16 +88,74 @@ function writeCopy() {
   const t1 = t0 + k1;
   const t2 = t1 + k2;
   const last = TL.seq[TL.seq.length - 1];
+  const classes = (x) => `${count(x)} ${x === 1 ? 'class' : 'classes'}`;
+  const skip30 = Math.max(0, forecast(a0, t0, P, 30).maxSkip);
   setStory('P%', `${P}%`);
-  setStory('beatA', `${a0} of ${t0} is ${fmt(percent(a0, t0))}. Skip ${word(k1)} and you are at ${fmt(percent(a0, t1))}, one class from the line.`);
-  setStory('beatB', `At ${a0} of ${t2} you need ${count(n)} ${n === 1 ? 'class' : 'classes'} in a row to climb back. Most people find out from the shortage list.`);
+  setStory(
+    'beatA',
+    `Take one course: ${a0} of ${t0} classes attended, ${fmt(percent(a0, t0))}. Skip ${word(k1)} and it falls to ${fmt(percent(a0, t1))}. One more skip and it is below the line.`,
+  );
+  setStory('beatB', `${Word(k2)} more skips: ${a0} of ${t2}, ${fmt(percent(a0, t2))}. Now it takes ${classes(n)} in a row, without a single miss, to get back.`);
   setStory(
     'beatC',
-    `${n <= 20 ? Word(n) : n} straight ${n === 1 ? 'class' : 'classes'} later you are back ${exact ? `at exactly ${P}%` : `above ${P}%, at ${fmt(percent(last.a, last.t))}`}. Every course, every day, at a glance.`,
+    `${n <= 20 ? Word(n) : n} ${n === 1 ? 'class' : 'classes'} later it is back ${exact ? `at exactly ${P}%` : `above ${P}%, at ${fmt(percent(last.a, last.t))}`}. Threshold does this sum for every course you take, every time your attendance changes.`,
   );
   setStory('k1', String(k1));
   setStory('n', String(n));
-  setStory('skip30', String(Math.max(0, forecast(a0, t0, P, 30).maxSkip)));
+  setStory('skip30', String(skip30));
+  // The three answers, told with the same example course.
+  setStory('q1', `Right now, without dropping below the line. With ${a0} of ${t0} attended and a ${P}% minimum, the example can miss ${k1} more.`);
+  setStory('q2', `Once you are below it: how many classes you must attend in a row. At ${a0} of ${t2} the example needs ${n}.`);
+  setStory(
+    'q3',
+    `Tell it when classes end. It counts the classes still to come and how many of them you can skip. From ${a0} of ${t0}, with 30 classes left, the example can skip ${skip30} and still finish at ${P}%.`,
+  );
+  buildTrack();
+}
+
+/* The readout's track: one mark per class in the story, in the order it is told
+   (the misses, then the run of attended classes), with a two-item key below. */
+let ticks = [];
+function buildTrack() {
+  const track = $('#hud-track');
+  if (!track) return;
+  const groups = [
+    { kind: 'miss', count: S.k1 },
+    { kind: 'miss', count: S.k2 },
+    { kind: 'attend', count: S.n },
+  ];
+  ticks = [];
+  const bars = document.createElement('div');
+  bars.className = 'hud__bars';
+  bars.append(
+    ...groups.map((g) => {
+      const row = document.createElement('div');
+      row.className = 'hud__ticks';
+      row.style.flex = `${g.count} 1 0`;
+      for (let i = 0; i < g.count; i++) {
+        const t = document.createElement('span');
+        t.className = `hud__tick is-${g.kind}`;
+        row.append(t);
+        ticks.push(t);
+      }
+      return row;
+    }),
+  );
+  const key = document.createElement('div');
+  key.className = 'hud__key';
+  key.innerHTML = '<span><i class="hud__swatch is-miss"></i>missed</span><span><i class="hud__swatch is-attend"></i>attended</span>';
+  track.replaceChildren(bars, key);
+}
+
+/** What the readout says at step i of the story. */
+function hudState(i) {
+  const { a, t } = TL.seq[i];
+  if (i === TL.keys[3]) return S.exact ? `Back at ${P}%` : `Back above ${P}%`;
+  const st = status(a, t, P);
+  if (st === 'below') return `Attend the next ${mustAttend(a, t, P)} in a row`;
+  if (st === 'edge') return 'No classes to spare';
+  const k = canMiss(a, t, P);
+  return `${k} ${k === 1 ? 'class' : 'classes'} to spare`;
 }
 
 /* ---------- Stage: one course's semester, told by scrolling ---------- */
@@ -122,7 +180,12 @@ function show(i, kick = true) {
   const { a, t } = TL.seq[i];
   hud.a.textContent = a;
   hud.t.textContent = t;
-  hud.state.textContent = sentence(a, t, P).short;
+  hud.state.textContent = hudState(i);
+  // Classes 1..i of the story have happened; mark i is the latest.
+  ticks.forEach((tick, k) => {
+    tick.classList.toggle('is-done', k < i);
+    tick.classList.toggle('is-now', k === i - 1);
+  });
   if (!intro) liquid.setLevel(percent(a, t), { kick });
 }
 
@@ -398,9 +461,14 @@ const read = {
   pct: $$('.vessel__pct-text'),
 };
 let tryLive = false;
+let tryTouched = false; // until someone edits the numbers, they follow the example course
 let lastBig = null;
 
 function syncTry() {
+  if (!tryTouched) {
+    tryA.value = S.a0;
+    tryT.value = S.t0;
+  }
   const values = [...new Set([...PRESETS, P])].sort((x, y) => x - y);
   trySeg.replaceChildren(
     ...values.map((p) => {
@@ -443,11 +511,18 @@ $$('[data-step]').forEach((b) =>
     const [field, d] = b.dataset.step.split(':');
     const input = field === 'a' ? tryA : tryT;
     input.value = Math.max(0, (Number(input.value) || 0) + Number(d));
+    tryTouched = true;
     updateTry(field);
   }),
 );
-tryA.addEventListener('input', () => updateTry('a'));
-tryT.addEventListener('input', () => updateTry('t'));
+tryA.addEventListener('input', () => {
+  tryTouched = true;
+  updateTry('a');
+});
+tryT.addEventListener('input', () => {
+  tryTouched = true;
+  updateTry('t');
+});
 [tryA, tryT].forEach((el) => el.addEventListener('blur', () => updateTry(el === tryA ? 'a' : 't')));
 trySeg.addEventListener('change', () => updateTry());
 // Fill the vessel when it first scrolls into view.

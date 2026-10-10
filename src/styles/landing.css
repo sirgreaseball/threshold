@@ -109,6 +109,12 @@
   text-align: right;
 }
 
+.hud__label {
+  font-size: 12px;
+  letter-spacing: 0.01em;
+  color: var(--muted);
+}
+
 .hud__pct {
   font-family: var(--sans);
   font-size: clamp(40px, 5.4vw, 84px);
@@ -125,6 +131,77 @@
 .hud__state {
   font-size: 14px;
   font-weight: 500;
+}
+
+/* The semester, one mark per class: filled = attended, outlined = missed,
+   faint = still to come. It fills in as the story scrolls. */
+.hud__track {
+  display: grid;
+  justify-items: end;
+  gap: 7px;
+  width: min(240px, 46vw);
+  margin-top: 10px;
+}
+
+.hud__bars {
+  display: flex;
+  gap: 7px;
+  width: 100%;
+}
+
+.hud__ticks {
+  display: flex;
+  gap: 2px;
+  min-width: 0;
+}
+
+.hud__tick {
+  flex: 1 1 0;
+  min-width: 1.5px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--hair);
+  transition: background-color 0.35s var(--ease-out), box-shadow 0.35s var(--ease-out), transform 0.5s var(--ease-out);
+}
+
+.hud__tick.is-done.is-attend {
+  background: var(--ink);
+}
+
+.hud__tick.is-done.is-miss {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.25px var(--muted);
+}
+
+.hud__tick.is-now {
+  transform: scaleY(1.45);
+}
+
+.hud__key {
+  display: flex;
+  gap: 12px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.hud__key span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.hud__swatch {
+  width: 7px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.hud__swatch.is-attend {
+  background: var(--ink);
+}
+
+.hud__swatch.is-miss {
+  box-shadow: inset 0 0 0 1.25px var(--muted);
 }
 
 /* The minimum picker. */
@@ -347,14 +424,26 @@
 }
 
 /* Questions */
-.qs {
+/* The first section after the story slides up over the stage like a sheet. */
+.after-stage {
   position: relative;
   z-index: 1;
   margin-top: -40svh;
   border-radius: var(--panel-r) var(--panel-r) 0 0;
   background: var(--paper);
   box-shadow: 0 -30px 50px -24px var(--shadow);
-  padding: clamp(96px, 16vh, 180px) var(--gutter) clamp(80px, 12vh, 140px);
+}
+
+.qs {
+  padding: clamp(80px, 12vh, 140px) var(--gutter);
+  border-top: 1px solid var(--hair);
+}
+
+.qs__lede {
+  max-width: 48ch;
+  margin: -32px 0 clamp(40px, 7vh, 80px);
+  color: var(--muted);
+  font-size: clamp(16px, 1.25vw, 18px);
 }
 
 .qs__title {
@@ -362,8 +451,8 @@
   font-weight: 600;
   line-height: 0.98;
   letter-spacing: -0.045em;
-  max-width: 14ch;
-  margin-bottom: clamp(56px, 9vh, 112px);
+  max-width: 15ch;
+  margin-bottom: 48px;
 }
 
 .qs__list {
@@ -557,7 +646,7 @@
   grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
   gap: clamp(32px, 6vw, 96px);
   align-items: stretch;
-  padding: clamp(64px, 10vh, 120px) var(--gutter);
+  padding: clamp(96px, 16vh, 180px) var(--gutter) clamp(72px, 11vh, 130px);
 }
 
 .try__copy {
@@ -810,7 +899,8 @@
 
 /* Short landscape screens: keep the readout small so the water stays clear of it. */
 @media (max-height: 620px) {
-  .hud__row {
+  .hud__row,
+  .hud__key {
     display: none;
   }
 
