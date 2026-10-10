@@ -21,24 +21,25 @@ const date = (s) => (/^\d{4}-\d{2}-\d{2}$/.test(s || '') ? s : '');
 export function cleanPart(p) {
   const conducted = whole(p.conducted);
   const perWeek = Math.max(0, Math.min(40, Number(p.perWeek) || 0));
-  const total = p.total == null || p.total === '' ? null : whole(p.total);
   return {
     id: String(p.id || uid()),
     kind: KINDS.includes(p.kind) ? p.kind : 'Theory',
     attended: Math.min(whole(p.attended), conducted),
     conducted,
     perWeek,
-    total,
   };
 }
 
 export function cleanCourse(c) {
   const parts = (Array.isArray(c.parts) && c.parts.length ? c.parts : [{ kind: 'Theory' }]).map(cleanPart);
   const credits = Number(c.credits);
+  // The classes the course has this semester, all parts together.
+  const total = Math.round(Number(c.total));
   return {
     id: String(c.id || uid()),
     name: String(c.name || 'Course').slice(0, 60),
     credits: credits > 0 && credits <= 30 ? credits : null,
+    total: total > 0 && total <= 1000 ? total : null,
     min: pct(c.min),
     plan: PLAN_MODES.includes(c.plan) ? c.plan : 'auto',
     parts,
@@ -114,7 +115,7 @@ export function sample(today = new Date()) {
       course('Software Engineering', 3, ['Theory', 17, 23], ['Practical', 17, 22]),
       course('Distributed Computing', 3, ['Theory', 12, 22], ['Practical', 18, 22]),
       course('Probability and Statistics', 4, ['Theory', 27, 34], ['Tutorial', 9, 11]),
-      course('Design Thinking', 2, ['Studio', 14, 16]),
+      course('Design Thinking', 1, ['Studio', 14, 16]),
     ],
   });
 }

@@ -81,14 +81,39 @@ export function weeklyFromCredits(credits, parts) {
   return out;
 }
 
-/** How a course's classes-left estimate is made, in the order "auto" tries them. */
-export const PLAN_MODES = ['auto', 'credits', 'weekly', 'total'];
+/** How a course's classes left are worked out. "auto" takes the first that has what it needs, in this order. */
+export const PLAN_MODES = ['auto', 'total', 'credits', 'pace', 'weekly'];
+
+// A semester is planned as 15 teaching weeks, so a credit is 15 classes, or 30 in a lab.
+export const TERM_WEEKS = 15;
+
+/**
+ * Split n classes over a course's parts in proportion to the classes each has
+ * held so far (evenly before any), so the shares add up to exactly n.
+ */
+function share(n, parts) {
+  const held = parts.reduce((s, p) => s + p.conducted, 0);
+  const raw = parts.map((p) => (held ? (n * p.conducted) / held : n / parts.length));
+  const out = raw.map(Math.floor);
+  let rest = n - out.reduce((s, x) => s + x, 0);
+  const order = raw.map((r, i) => [r - out[i], i]).sort((a, b) => b[0] - a[0]);
+  for (const [, i] of order) {
+    if (rest-- <= 0) break;
+    out[i]++;
+  }
+  return new Map(parts.map((p, i) => [p.id, out[i]]));
+}
 
 /**
  * Classes still to come for each part of a course.
  * term: { start, end, asOf } as 'YYYY-MM-DD' strings ('' when unknown).
  * Returns { total, byPart: Map, source, reason } where source is one of
- * 'pace' | 'credits' | 'weekly' | 'total' and total is null when unknown.
+ * 'total' | 'credits' | 'pace' | 'weekly' and total is null when unknown.
+ *
+ * - total: the classes the course has this semester, as the college plans it.
+ * - credits: that total worked out from credits, a 15-week semester.
+ * - pace: classes held so far a week, until the end date. An estimate.
+ * - weekly: classes a week for each part, until the end date.
  */
 export function classesLeft(course, term, today = new Date()) {
   const start = parseDate(term.start);
@@ -97,39 +122,41 @@ export function classesLeft(course, term, today = new Date()) {
   const mode = course.plan || 'auto';
   const parts = course.parts;
   const none = (reason) => ({ total: null, byPart: null, source: null, reason });
+  const weeksLeft = end ? Math.max(0, daysBetween(asOf, end)) / 7 : 0;
 
-  if (mode === 'total') {
-    if (!parts.some((p) => p.total > 0)) return none('no-total');
-    const byPart = new Map(parts.map((p) => [p.id, p.total > 0 ? Math.max(0, p.total - p.conducted) : 0]));
-    return done(byPart, 'total');
-  }
-  if (!end) return none('no-end');
-  const weeksLeft = Math.max(0, daysBetween(asOf, end)) / 7;
-
-  const fromWeekly = (weekly, source) =>
-    done(new Map(parts.map((p) => [p.id, Math.round((weekly.get(p.id) || 0) * weeksLeft)])), source);
-
+  const fromTotal = () => {
+    if (!(course.total > 0)) return none('no-total');
+    const held = parts.reduce((s, p) => s + p.conducted, 0);
+    return done(share(Math.max(0, course.total - held), parts), 'total');
+  };
   const fromCredits = () => {
     const weekly = weeklyFromCredits(course.credits, parts);
     if (!weekly) return none('no-credits');
-    if (!start) return fromWeekly(weekly, 'credits');
-    // Credits fix the planned total for the semester; what is left is that minus what has been held.
-    const termWeeks = Math.max(0, daysBetween(start, end)) / 7;
-    return done(new Map(parts.map((p) => [p.id, Math.max(0, Math.round((weekly.get(p.id) || 0) * termWeeks) - p.conducted)])), 'credits');
+    return done(new Map(parts.map((p) => [p.id, Math.max(0, Math.round((weekly.get(p.id) || 0) * TERM_WEEKS) - p.conducted)])), 'credits');
+  };
+  const fromPace = () => {
+    if (!end) return none('no-end');
+    if (!start) return none('no-start');
+    const elapsed = daysBetween(start, asOf);
+    if (elapsed < 14 || !parts.some((p) => p.conducted > 0)) return none('too-early');
+    return done(new Map(parts.map((p) => [p.id, Math.round(((p.conducted * 7) / elapsed) * weeksLeft)])), 'pace');
+  };
+  const fromWeekly = () => {
+    if (!end) return none('no-end');
+    if (!parts.some((p) => p.perWeek > 0)) return none('no-weekly');
+    return done(new Map(parts.map((p) => [p.id, Math.round((p.perWeek || 0) * weeksLeft)])), 'weekly');
   };
 
+  if (mode === 'total') return fromTotal();
   if (mode === 'credits') return fromCredits();
-  if (mode === 'weekly') return fromWeekly(new Map(parts.map((p) => [p.id, p.perWeek || 0])), 'weekly');
-
-  // auto: the pace so far is the best guide once there are two weeks of data.
-  const elapsed = start ? daysBetween(start, asOf) : 0;
-  if (start && elapsed >= 14 && parts.some((p) => p.conducted > 0)) {
-    const weeks = elapsed / 7;
-    return done(new Map(parts.map((p) => [p.id, Math.round((p.conducted / weeks) * weeksLeft)])), 'pace');
-  }
+  if (mode === 'pace') return fromPace();
+  if (mode === 'weekly') return fromWeekly();
+  // auto: what the college plans beats an estimate.
+  if (course.total > 0) return fromTotal();
   if (course.credits > 0) return fromCredits();
-  if (parts.some((p) => p.perWeek > 0)) return fromWeekly(new Map(parts.map((p) => [p.id, p.perWeek || 0])), 'weekly');
-  return none(start ? 'too-early' : 'no-start');
+  const pace = fromPace();
+  if (pace.total == null && end && parts.some((p) => p.perWeek > 0)) return fromWeekly();
+  return pace;
 
   function done(byPart, source) {
     let total = 0;

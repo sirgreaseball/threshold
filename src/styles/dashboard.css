@@ -475,6 +475,28 @@ html:has(.dashboard),
   color: var(--danger);
 }
 
+/* "24 of 60": the semester's total classes, beside the classes left. */
+.row__left {
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  column-gap: 6px;
+}
+
+.row__left .row__k {
+  grid-column: 1 / -1;
+}
+
+.row__of {
+  font-size: 13px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.row__of:empty {
+  display: none;
+}
+
 .row__v[data-tone='muted'] {
   color: var(--muted);
   font-size: 14px;
@@ -1085,11 +1107,18 @@ html:has(.dashboard),
   border-top: 1px solid var(--hair);
 }
 
+.review__hint {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
 .review__item {
   display: grid;
   grid-template-columns: 18px minmax(0, 1fr) auto;
   grid-template-areas:
-    'box name name'
+    'box name total'
     '. parts pct';
   gap: 2px 12px;
   align-items: center;
@@ -1137,6 +1166,44 @@ html:has(.dashboard),
   grid-area: pct;
   font-size: 13px;
   text-align: right;
+}
+
+.review__total {
+  grid-area: total;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.review__total input {
+  width: 64px;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--hair);
+  border-radius: 9px;
+  background: transparent;
+  color: var(--ink);
+  font-size: 15px;
+  text-align: right;
+}
+
+.review__total input::-webkit-inner-spin-button,
+.review__total input::-webkit-outer-spin-button {
+  margin: 0;
+  -webkit-appearance: none;
+}
+
+.review__total input {
+  -moz-appearance: textfield;
+}
+
+.review__total input:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: var(--accent-soft);
 }
 
 /* A course that does not add up to the percentage printed on the report. */

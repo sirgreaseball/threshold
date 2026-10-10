@@ -3,7 +3,7 @@ import './styles/dashboard.css';
 
 import gsap from 'gsap';
 import { Skyline } from './skyline.js';
-import { evaluate, shortName, KINDS, parseDate, isoDate, daysBetween, startOfDay, weeklyFromCredits, sumParts, slack } from './plan.js';
+import { evaluate, classesLeft, shortName, KINDS, TERM_WEEKS, parseDate, isoDate, daysBetween, startOfDay, weeklyFromCredits, sumParts, slack } from './plan.js';
 import { percent } from './core.js';
 import { blank, sample, uid, cleanState, cleanCourse, takePending, forgetSaved } from './store.js';
 import { readReportFile, readReportText, ReportError } from './report.js';
@@ -66,6 +66,7 @@ const niceDate = (iso) => {
   return d ? `${d.getDate()} ${MONTHS[d.getMonth()]}` : '';
 };
 const find = (id) => state.courses.find((c) => c.id === id);
+const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /** Where a course stands today, in plain words. Only shown when it matters. */
 function nowText(v) {
@@ -88,7 +89,8 @@ function nowText(v) {
 function stats(v) {
   const none = { text: '\u2014', tone: 'muted' };
   if (v.plan.total == null) {
-    const left = { text: v.plan.reason === 'no-end' || v.plan.reason === 'no-start' ? 'Add dates' : 'Pick an estimate', tone: 'muted' };
+    // The course's total classes is the one thing that always makes the numbers exact.
+    const left = { text: { 'no-credits': 'Add credits', 'no-weekly': 'Add per week' }[v.plan.reason] || 'Add the total', tone: 'muted' };
     if (v.status === 'empty') return { left, attend: none, skip: none, note: '' };
     if (v.status === 'below') {
       return { left, attend: { text: Number.isFinite(v.need) ? `Next ${v.need}` : 'All', tone: 'danger' }, skip: { text: '0', tone: 'danger' }, note: '' };
@@ -97,14 +99,16 @@ function stats(v) {
   }
   const left = v.left;
   const e = v.end;
-  if (!left) return { left: { text: '0', tone: 'muted' }, attend: { text: '0', tone: 'muted' }, skip: { text: '0', tone: 'muted' }, note: '' };
+  // "of 60" when the college's total is known, "of ~48" when it is an estimate.
+  const of = `of ${v.plan.source === 'total' || v.plan.source === 'credits' ? '' : '~'}${e.total}`;
+  if (!left) return { left: { text: '0', tone: 'muted', of }, attend: { text: '0', tone: 'muted' }, skip: { text: '0', tone: 'muted' }, note: '' };
   if (!e.reachable) {
     const best = v.mode === 'separate' && v.endKind ? `${v.endKind} best case` : 'Best case';
-    return { left: { text: String(left), tone: '' }, attend: { text: `All ${left}`, tone: 'danger' }, skip: { text: '0', tone: 'danger' }, note: `${best} ${fmt(e.best)}` };
+    return { left: { text: String(left), tone: '', of }, attend: { text: `All ${left}`, tone: 'danger' }, skip: { text: '0', tone: 'danger' }, note: `${best} ${fmt(e.best)}` };
   }
   const skip = e.maxSkip;
   return {
-    left: { text: String(left), tone: '' },
+    left: { text: String(left), tone: '', of },
     attend: { text: skip === 0 ? `All ${left}` : String(left - skip), tone: skip === 0 ? 'edge' : '' },
     skip: { text: String(skip), tone: skip === 0 ? 'edge' : 'good' },
     note: '',
@@ -120,45 +124,56 @@ function statsLine(v) {
     return v.miss ? `Can miss ${v.miss} now and stay at ${v.min}%` : 'No classes to spare right now';
   }
   if (s.left.text === '0') return 'No classes left';
-  if (s.note) return `${s.left.text} left: attend all of them. ${s.note}`;
-  if (s.skip.text === '0') return `${s.left.text} left: attend all of them`;
-  return `${s.left.text} left: attend ${s.attend.text}, skip up to ${s.skip.text}`;
+  const left = `${s.left.text} left ${s.left.of}`;
+  if (s.note) return `${left}: attend all of them. ${s.note}`;
+  if (s.skip.text === '0') return `${left}: attend all of them`;
+  return `${left}: attend ${s.attend.text}, skip up to ${s.skip.text}`;
 }
 
 /** Semester dates as used for the maths: a missing end date is assumed 16 weeks after the start. */
-function guessEnd() {
-  const s = parseDate(state.term.start);
-  if (!s || state.term.end) return '';
+function assumedEnd(start) {
+  const s = parseDate(start);
+  if (!s) return '';
   const d = new Date(s);
   d.setDate(d.getDate() + 16 * 7 - 3);
   return isoDate(d);
 }
+const guessEnd = () => (state.term.end ? '' : assumedEnd(state.term.start));
 const termNow = () => ({ ...state.term, end: state.term.end || guessEnd() });
 
 const REASON = {
-  'no-end': 'Add the day classes end, above, to see what is still possible.',
-  'no-start': 'Add the day classes began, or estimate from credits or classes a week.',
-  'too-early': 'After two weeks of classes Threshold can use your pace. Until then, use credits or classes a week.',
-  'no-credits': 'Enter the course credits to estimate the classes left.',
-  'no-total': 'Enter how many classes are planned in total.',
+  'no-end': 'Add the total classes this semester, or the day classes end, above.',
+  'no-start': 'Add the total classes this semester, or the day classes began, above.',
+  'too-early': 'After two weeks of classes Threshold can use your pace. Until then, add the total classes or the credits.',
+  'no-credits': 'Enter the course credits: each is 15 classes over the semester, or 30 in a lab.',
+  'no-total': 'Enter how many classes this course has this semester, all types together.',
+  'no-weekly': 'Enter how many classes a week each type has.',
 };
 
-function forecastLine(left, e, min, pct, exact, kind = '') {
+/**
+ * The semester as a whole: its classes, how many the minimum needs, how many
+ * can be missed in all and how many already were, then what that leaves.
+ */
+function forecastLine(j, exact, kind = '') {
+  const { left, end: e, min } = j;
   const lead = kind ? `${kind}: ` : '';
-  if (left === 0) return `${lead}No classes left. You finish at ${fmt(pct)}.`;
-  const head = `${lead}${exact ? '' : 'About '}${plural(left, 'class', 'classes')} left`;
-  if (!e.reachable) return `${head}. Even attending every one, you finish at ${fmt(e.best)}, short of ${min}%.`;
-  if (e.maxSkip === 0) return `${head}. Attend every one to finish at ${min}%.`;
-  return `${head}. Skip up to ${e.maxSkip} and you still finish at ${min}% or above.`;
+  if (left === 0) return `${lead}No classes left. You finish at ${fmt(j.pct)}.`;
+  const missed = j.conducted - j.attended;
+  const semester = `${cap(`${exact ? '' : 'about '}${plural(e.total, 'class', 'classes')}`)} this semester.`;
+  if (!e.reachable) {
+    return `${lead}${semester} At ${min}% you need ${e.needed}, but you have missed ${missed}: even attending all ${left} left, you finish at ${fmt(e.best)}.`;
+  }
+  const spare = e.total - e.needed;
+  const rest =
+    e.maxSkip === 0 ? `Attend all ${left} left.` : e.maxSkip >= left ? `You can skip all ${left} left.` : `Of the ${left} left, attend ${left - e.maxSkip} and you can skip ${e.maxSkip}.`;
+  return `${lead}${semester} At ${min}% you need ${e.needed}, so you can miss ${spare} in all. You have missed ${missed}. ${rest}`;
 }
 
 function forecastText(course, v) {
   if (v.plan.total == null) return REASON[v.plan.reason] || '';
-  const exact = v.plan.source === 'total';
-  if (v.mode === 'separate') {
-    return v.parts.map((p) => forecastLine(p.judge.left ?? 0, p.judge.end, p.judge.min, p.judge.pct, exact, p.kind)).join(' ');
-  }
-  return forecastLine(v.left, v.end, v.min, v.pct, exact);
+  const exact = v.plan.source === 'total' || v.plan.source === 'credits';
+  if (v.mode === 'separate') return v.parts.map((p) => forecastLine({ ...p.judge, left: p.judge.left ?? 0 }, exact, p.kind)).join(' ');
+  return forecastLine(v, exact);
 }
 
 /** The weekly rates behind an estimate, in words: "2 theory and 2 practical a week". */
@@ -181,11 +196,11 @@ function planNote(course, v) {
     const asOf = parseDate(state.term.asOf) || startOfDay();
     const weeks = daysBetween(start, asOf) / 7;
     const rates = new Map(course.parts.map((p) => [p.id, p.conducted / weeks]));
-    return `Your classes have run at about ${ratesText(course, rates)} a week so far.`;
+    return `An estimate: your classes have run at about ${ratesText(course, rates)} a week, carried on to the end date. Add the total classes for exact numbers.`;
   }
   if (src === 'credits') {
     const w = weeklyFromCredits(course.credits, course.parts);
-    return `${plural(course.credits, 'credit')} plans ${ratesText(course, w)} classes a week. One credit is one lecture hour or two lab hours a week.`;
+    return `${plural(course.credits, 'credit')} plan ${ratesText(course, w)} classes a week over a ${TERM_WEEKS}-week semester.`;
   }
   return '';
 }
@@ -332,7 +347,9 @@ function paintTerm() {
   const e = parseDate(end);
   const now = parseDate(asOf) || startOfDay();
   let note;
-  if (!e) note = 'Add the day classes began or end to see the classes left in each course.';
+  const planned = state.courses.length && state.courses.every((c) => ['total', 'credits'].includes(views.get(c.id)?.plan.source));
+  if (planned) note = 'Every course has its total classes, so these dates only matter for an estimate from your pace.';
+  else if (!e) note = 'Add the day classes began or end, or each course\'s total classes, to see the classes left.';
   else if (e < now) note = 'That end date has passed.';
   else {
     const days = daysBetween(now, e);
@@ -408,6 +425,7 @@ function paintRow(c, v, animate) {
   el.classList.toggle('is-unreachable', !!(v.end && !v.end.reachable));
   $('.row__name', el).textContent = c.name;
   const meta = [c.parts.map((p) => p.kind).join(' + ')];
+  if (v.conducted) meta.push(`${v.attended} of ${v.conducted} attended`);
   if (c.credits) meta.push(plural(c.credits, 'credit'));
   if (c.min) meta.push(`needs ${c.min}%`);
   $('.row__parts', el).textContent = meta.join(', ');
@@ -434,6 +452,7 @@ function paintRow(c, v, animate) {
     node.dataset.tone = s[key].tone;
     setText(node, s[key].text, animate);
   }
+  $('.row__of', el).textContent = s.left.of || '';
   $('.row__sum', el).setAttribute('aria-label', `${c.name}, ${v.status === 'empty' ? 'no classes yet' : fmt(v.pct)}. ${statsLine(v)}. Show details.`);
 
   // Drawer
@@ -493,7 +512,7 @@ function paintParts(row, c, v) {
   }
 }
 
-const PLAN_LABEL = { auto: 'Pace so far', credits: 'Credits', weekly: 'Per week', total: 'Planned total' };
+const PLAN_LABEL = { total: 'Total classes', credits: 'Credits', pace: 'Pace so far', weekly: 'Per week' };
 
 function paintPlan(row, c, v) {
   const el = row.el;
@@ -508,27 +527,28 @@ function paintPlan(row, c, v) {
       }),
     );
   }
-  for (const input of $$('input', modes)) input.checked = input.value === (c.plan || 'auto');
+  // "auto" shows whichever way it settled on.
+  const mode = c.plan && c.plan !== 'auto' ? c.plan : v.plan.source || 'pace';
+  for (const input of $$('input', modes)) input.checked = input.value === mode;
 
   const box = $('.plan__inputs', el);
-  const mode = c.plan || 'auto';
   const sig = `${mode}|${c.parts.map((p) => p.id).join()}`;
   if (box.dataset.sig !== sig) {
     box.dataset.sig = sig;
     box.replaceChildren();
-    if (mode === 'credits') {
-      box.append(field('Credits', 'credits', c.credits ?? '', { step: '0.5', placeholder: '3' }));
+    if (mode === 'total') {
+      box.append(field('Classes this semester', 'total', c.total ?? '', { placeholder: '60' }));
+    } else if (mode === 'credits') {
+      box.append(field('Credits', 'credits', c.credits ?? '', { step: '0.5', placeholder: '4' }));
     } else if (mode === 'weekly') {
       c.parts.forEach((p) => box.append(field(`${p.kind} a week`, 'perWeek', p.perWeek || '', { step: '0.5', part: p.id, placeholder: '2' })));
-    } else if (mode === 'total') {
-      c.parts.forEach((p) => box.append(field(`${p.kind} planned`, 'total', p.total ?? '', { part: p.id, placeholder: '30' })));
     }
   } else {
     for (const input of $$('input', box)) {
       if (document.activeElement === input) continue;
       const p = input.dataset.part && c.parts.find((x) => x.id === input.dataset.part);
-      const val = input.dataset.field === 'credits' ? c.credits : p ? (input.dataset.field === 'total' ? p.total : p.perWeek || '') : '';
-      input.value = val ?? '';
+      const f = input.dataset.field;
+      input.value = (f === 'credits' ? c.credits : f === 'total' ? c.total : p ? p.perWeek || '' : '') ?? '';
     }
   }
   const note = planNote(c, v);
@@ -541,7 +561,7 @@ function paintPlan(row, c, v) {
 function field(label, name, value, { step = '1', part = '', placeholder = '' } = {}) {
   const wrap = document.createElement('label');
   wrap.className = 'plan__field';
-  wrap.innerHTML = `<span></span><input type="number" class="num" min="0" max="${name === 'credits' ? 30 : 400}" inputmode="decimal" />`;
+  wrap.innerHTML = `<span></span><input type="number" class="num" min="0" max="${name === 'credits' ? 30 : 1000}" inputmode="decimal" />`;
   wrap.firstChild.textContent = label;
   const input = wrap.lastChild;
   input.step = step;
@@ -717,10 +737,12 @@ els.list.addEventListener('change', (e) => {
     commit(() => (find(c.id).plan = t.value));
   } else if (t.dataset.field === 'credits') {
     commit(() => (find(c.id).credits = Number(t.value) > 0 ? Number(t.value) : null));
-  } else if (t.dataset.field === 'perWeek' || t.dataset.field === 'total') {
+  } else if (t.dataset.field === 'total') {
+    commit(() => (find(c.id).total = Number(t.value) > 0 ? Math.round(Number(t.value)) : null));
+  } else if (t.dataset.field === 'perWeek') {
     commit(() => {
       const q = find(c.id).parts.find((x) => x.id === t.dataset.part);
-      q[t.dataset.field] = t.value === '' ? (t.dataset.field === 'total' ? null : 0) : Math.max(0, Number(t.value) || 0);
+      q.perWeek = t.value === '' ? 0 : Math.max(0, Number(t.value) || 0);
     });
   } else return;
   paintAll();
@@ -935,11 +957,16 @@ function review(report) {
       const li = document.createElement('li');
       li.className = 'review__item';
       const { attended, conducted } = sumParts(c.parts);
-      li.innerHTML = `<input type="checkbox" checked data-i="${i}" /><textarea class="review__name" data-i="${i}" maxlength="60" rows="1" spellcheck="false"></textarea><span class="review__parts"></span><span class="review__pct num"></span>`;
+      li.innerHTML = `<input type="checkbox" checked data-i="${i}" /><textarea class="review__name" data-i="${i}" maxlength="60" rows="1" spellcheck="false"></textarea><span class="review__parts"></span><span class="review__pct num"></span><label class="review__total"><input type="number" class="num" min="1" max="1000" inputmode="numeric" /><span>classes</span></label>`;
       li.children[0].setAttribute('aria-label', `Import ${c.name}`);
       li.children[1].value = c.name;
       li.children[1].setAttribute('aria-label', 'Course name');
       li.children[2].textContent = c.parts.map((p) => `${p.kind} ${p.attended}/${p.conducted}`).join(' · ');
+      const total = $('.review__total input', li);
+      total.setAttribute('aria-label', `${c.name}: total classes this semester`);
+      if (c.total) total.value = c.total;
+      const est = estimateTotal(c, report);
+      total.placeholder = est ? `~${est}` : 'Total';
       const pct = li.children[3];
       pct.textContent = fmt(percent(attended, conducted));
       if (c.check) {
@@ -955,6 +982,14 @@ function review(report) {
   step('review');
   $$('.review__name', list).forEach(fitName);
   if (!reduce) gsap.from($$('.review__item', list), { y: 10, opacity: 0, duration: 0.6, ease: 'expo.out', stagger: 0.03 });
+}
+
+/** The total an import would assume without being told: classes held, plus the pace carried on to the assumed end. */
+function estimateTotal(c, report) {
+  const parts = c.parts.map((p, k) => ({ ...p, id: String(k) }));
+  const term = { start: report.start || '', end: assumedEnd(report.start), asOf: report.asOf || '' };
+  const plan = classesLeft({ parts, plan: 'pace' }, term);
+  return plan.total == null ? null : plan.total + sumParts(parts).conducted;
 }
 
 function check(name, label, checked) {
@@ -995,7 +1030,8 @@ $('#review-go').addEventListener('click', () => {
     .map((li) => {
       const i = Number(li.children[0].dataset.i);
       const name = li.children[1].value.replace(/\s+/g, ' ').trim() || report.courses[i].name;
-      return { ...report.courses[i], name };
+      const total = Number($('.review__total input', li).value);
+      return { ...report.courses[i], name, total: total > 0 ? Math.round(total) : null };
     });
   const useRule = $('input[name="use-rule"]', els.importDlg)?.checked;
   const useDates = $('input[name="use-dates"]', els.importDlg)?.checked;
@@ -1004,7 +1040,7 @@ $('#review-go').addEventListener('click', () => {
   commit(() => {
     if (useRule && report.rule) state.rule.min = report.rule;
     state.term = { start: (useDates && report.start) || '', end: '', asOf: (useDates && report.asOf) || '' };
-    state.courses = chosen.map((c) => cleanCourse({ id: uid(), name: c.name, credits: c.credits, parts: c.parts.map((p) => ({ ...p, id: uid() })) }));
+    state.courses = chosen.map((c) => cleanCourse({ id: uid(), name: c.name, credits: c.credits, total: c.total, parts: c.parts.map((p) => ({ ...p, id: uid() })) }));
   }, `Imported ${plural(chosen.length, 'course')}`);
   pending = null;
   closeSheet(els.importDlg);

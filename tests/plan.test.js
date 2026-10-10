@@ -27,19 +27,46 @@ test('classes left: pace so far, credits, weekly and planned totals', () => {
   assert.deepEqual(Object.fromEntries(pace.byPart), { t: 11, p: 11 });
   assert.equal(pace.total, 22);
 
-  // 3 credits plan 2 + 2 a week over the 17.6-week term: 35 planned per part, 13 still to come.
+  // 3 credits plan 2 + 2 a week over a 15-week semester: 30 classes of each, 8 still to come.
   const cred = classesLeft({ ...cn(), plan: 'credits', credits: 3 }, term);
   assert.equal(cred.source, 'credits');
-  assert.deepEqual(Object.fromEntries(cred.byPart), { t: 13, p: 13 });
+  assert.deepEqual(Object.fromEntries(cred.byPart), { t: 8, p: 8 });
 
   const wk = classesLeft({ ...cn(), plan: 'weekly', parts: [part('t', 'Theory', 21, 22, { perWeek: 3 }), part('p', 'Practical', 20, 22, { perWeek: 2 })] }, term);
   assert.deepEqual(Object.fromEntries(wk.byPart), { t: 17, p: 11 });
 
-  const tot = classesLeft({ ...cn(), plan: 'total', parts: [part('t', 'Theory', 21, 22, { total: 30 }), part('p', 'Practical', 20, 22, { total: 20 })] }, term);
-  assert.deepEqual(Object.fromEntries(tot.byPart), { t: 8, p: 0 });
+  // 60 classes this semester, 44 held: 16 to come, shared like the classes so far.
+  const tot = classesLeft({ ...cn(), total: 60 }, term);
+  assert.equal(tot.source, 'total');
+  assert.deepEqual(Object.fromEntries(tot.byPart), { t: 8, p: 8 });
 
   assert.equal(classesLeft(cn(), { ...term, end: '' }).reason, 'no-end');
   assert.equal(classesLeft(cn(), { ...term, start: '' }).reason, 'no-start');
+});
+
+test('classes left: what the college plans comes before an estimate', () => {
+  // A total or credits need no dates at all, and beat the pace so far.
+  assert.equal(classesLeft({ ...cn(), total: 60, credits: 3 }, { start: '', end: '', asOf: '' }).source, 'total');
+  assert.equal(classesLeft({ ...cn(), credits: 3 }, term).source, 'credits');
+  assert.equal(classesLeft({ ...cn(), total: 60, plan: 'pace' }, term).source, 'pace');
+  // Shares always add up to the classes left, however they split.
+  const odd = classesLeft({ id: 'x', name: 'X', total: 47, parts: [part('a', 'Theory', 10, 13), part('b', 'Tutorial', 3, 4), part('c', 'Practical', 2, 3)] }, term);
+  assert.equal(odd.total, 27);
+  assert.equal([...odd.byPart.values()].reduce((s, n) => s + n, 0), 27);
+});
+
+test('a semester counted the way students count it', () => {
+  // 60 classes this semester, 31 of 38 attended, 80% minimum: 48 needed, so 12
+  // can be missed in all. 7 are gone; of the 22 left, attend 17 and skip 5.
+  const course = { id: 'x', name: 'Torts', total: 60, parts: [part('t', 'Theory', 24, 29), part('u', 'Tutorial', 7, 9)] };
+  const e = evaluate(course, { min: 80, mode: 'combined' }, { start: '', end: '', asOf: '' });
+  assert.equal(e.left, 22);
+  assert.equal(e.end.total, 60);
+  assert.equal(e.end.needed, 48);
+  assert.equal(e.end.maxSkip, 5);
+  assert.equal(e.left - e.end.maxSkip, 17);
+  // At 72%, 43.2 classes are needed: 44, never 43, since 43 of 60 is 71.67%.
+  assert.equal(evaluate(course, { min: 72, mode: 'combined' }, term).end.needed, 44);
 });
 
 test('evaluate: combined counts against one minimum', () => {
