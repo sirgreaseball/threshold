@@ -198,7 +198,8 @@ function findRule(flat) {
 const MONTH = 'jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec';
 const DATE = `(?:\\d{1,2}[./-]\\d{1,2}[./-]\\d{2,4}|\\d{4}-\\d{1,2}-\\d{1,2}|\\d{1,2}(?:st|nd|rd|th)?[\\s./-]*(?:${MONTH})[a-z]*\\.?[\\s,./-]*\\d{4}|(?:${MONTH})[a-z]*\\.?\\s+\\d{1,2}(?:st|nd|rd|th)?,?\\s+\\d{4})`;
 
-function toIso(s) {
+/** A date as reports print it, as 'YYYY-MM-DD', or null. */
+export function toIso(s) {
   let d;
   let m;
   let y;

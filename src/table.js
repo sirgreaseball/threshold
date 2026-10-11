@@ -17,8 +17,11 @@
 //    record above that wrapped ("LAW OF TORTS AND" + "CONSUMER PROTECTION").
 // 4. Records with the same course name, or with the name left blank, become
 //    the parts of one course.
+//
+// A register, with one row per class marked P (present), A (absent) and so on
+// instead of counts, is read the same way: each row is one class held.
 
-import { kindOf, titleCase } from './parse.js';
+import { kindOf, titleCase, toIso } from './parse.js';
 
 /** @typedef {{ page: number, x: number, y: number, w: number, h: number, str: string }} Piece */
 
@@ -31,6 +34,7 @@ const ROLES = [
   ['division', /division|section|batch|group|\bdiv\b|\bsec\b/i],
   ['code', /code|\bid\b/i],
   ['credits', /credit/i],
+  ['date', /^(class |lecture )?date$/i],
   ['other', /faculty|teacher|instructor|professor|semester|\bdate\b|remark|status|eligib|slot|room/i],
   ['type', /type|component|category|nature|\bmode\b|\bkind\b/i],
   ['held', /conduct|held|deliver|total|taken|occur|sessions|lectures|classes|periods|hours|\b(cond|del|tot)\b/i],
@@ -226,13 +230,25 @@ function columnsOf(band) {
   return { cols, kinds: split ? kinds : [null] };
 }
 
-/** Pieces of a line by column key, or null when the line is prose running across the table. */
+/**
+ * Pieces of a line by column key, or null when the line is prose running across the table.
+ * A piece belongs to the header it sits under; one under no header goes by its centre.
+ */
 function cellsOf(line, cols) {
   const span = cols.length > 1 ? cols.at(-1).cx - cols[0].cx : Infinity;
   const cells = {};
   for (const p of line.pieces) {
     const cx = p.x + p.w / 2;
-    const col = cols.find((c) => cx >= c.from && cx < c.to);
+    let col = null;
+    let most = 0;
+    for (const c of cols) {
+      const o = Math.min(p.x + p.w, c.x1) - Math.max(p.x, c.x0);
+      if (o > most) {
+        most = o;
+        col = c;
+      }
+    }
+    col ||= cols.find((c) => cx >= c.from && cx < c.to);
     if (!col) continue;
     // A piece wider than most of the table is a sentence, not a cell.
     if (p.w > 0.6 * span && cols.length > 2) return null;
@@ -282,10 +298,21 @@ function countsOf(c, suffix) {
   return attended > held ? { held: attended, attended: held } : { held, attended };
 }
 
+// The marks of a register. Classes not marked yet, exempted or held before a late
+// admission count for neither side; they are reported, not counted.
+const MARK = { P: 'present', PR: 'present', PRESENT: 'present', A: 'absent', AB: 'absent', ABSENT: 'absent', NU: 'pending', E: 'excused', L: 'excused' };
+
 function finish(rec) {
   const c = rec.cells;
   // A totals row is not a course.
   if (['name', 'code', 'serial', 'type'].some((r) => /^(grand\s*)?(total|overall|aggregate)\b/i.test(text(c[r])))) return null;
+  const base = { name: text(c.name).replace(/[\s,;:-]+$/, ''), code: text(c.code), type: text(c.type), percent: null, decimals: 0, credits: null };
+  // One class in a register.
+  const mark = rec.kinds[0] == null && MARK[text(c.attended).toUpperCase()];
+  if (mark) {
+    const held = mark === 'present' || mark === 'absent';
+    return { ...base, parts: held ? [{ kind: null, held: 1, attended: mark === 'present' ? 1 : 0 }] : [], mark, date: toIso(text(c.date)) };
+  }
   const split = rec.kinds[0] != null;
   const parts = [];
   for (const kind of rec.kinds) {
@@ -311,6 +338,11 @@ const keyOf = (s) => s.toUpperCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 
 // "Physics Lab", "Chemistry (Practical)": a course name that ends in the kind of class.
 const KIND_TAIL = /[\s([–-]+(theory|lectures?|lab|labs|laboratory|practicals?|tutorials?)[)\].]*$/i;
+
+// A register names the class by its division: "Computer NetworksT4 CSDS Sem-V Div-A",
+// "Operating Systems P4 CSDS Batch-A1". The letter before the digit is the kind.
+const DIVISION = /^(.+?)\s*([TPUS])\d(?![a-z\d])/;
+const DIVISION_KIND = { T: 'Theory', P: 'Practical', U: 'Tutorial', S: 'Studio' };
 const tailOf = (name) => {
   const m = name.match(KIND_TAIL);
   return m && m.index > 0 ? { bare: name.slice(0, m.index), word: m[1] } : null;
@@ -337,6 +369,11 @@ function group(records) {
     // A blank name continues the course above (a merged cell), then the code, then a number.
     let name = r.name || (prev ? prev.name : r.code) || `Course ${courses.length + 1}`;
     let type = r.type;
+    const division = !type && r.mark && name.match(DIVISION);
+    if (division) {
+      name = division[1];
+      type = DIVISION_KIND[division[2]];
+    }
     const t = tailOf(name);
     if (t) {
       type ||= t.word;
@@ -348,7 +385,7 @@ function group(records) {
     const key = keyOf(name);
     let course = byKey.get(key);
     if (!course) {
-      course = { name: titleCase(name), parts: [], credits: null, rows: [] };
+      course = { name: titleCase(name), parts: [], credits: null, rows: [], pending: 0, excused: 0 };
       byKey.set(key, course);
       courses.push(course);
     }
@@ -360,15 +397,24 @@ function group(records) {
         part.conducted += p.held;
       } else course.parts.push({ kind, attended: p.attended, conducted: p.held });
     }
+    if (r.mark === 'pending') course.pending++;
+    if (r.mark === 'excused') course.excused++;
     course.rows.push(r);
     if (r.credits && !course.credits) course.credits = r.credits;
     prev = { name };
   }
+  const order = ['Theory', 'Practical', 'Tutorial', 'Studio'];
   for (const course of courses) {
+    course.parts.sort((x, y) => order.indexOf(x.kind) - order.indexOf(y.kind));
     course.check = checkOf(course);
     delete course.rows;
   }
-  return { courses, rows: records.length };
+  const sum = (k) => courses.reduce((s, c) => s + c[k], 0);
+  const out = { courses, rows: records.length, pending: sum('pending'), excused: sum('excused') };
+  // A register knows when classes really began and when the last one was marked.
+  const dates = records.filter((r) => r.date && (r.mark === 'present' || r.mark === 'absent')).map((r) => r.date).sort();
+  if (dates.length) Object.assign(out, { start: dates[0], asOf: dates.at(-1) });
+  return out;
 }
 
 /**

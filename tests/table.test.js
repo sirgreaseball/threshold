@@ -137,3 +137,39 @@ test('report dates in any common format', () => {
   assert.equal(parseReport('from July 7, 2026 till September 27, 2026').start, '2026-07-07');
   assert.equal(parseReport('From 2026-07-07 To 2026-09-27').asOf, '2026-09-27');
 });
+
+// A register: one row per class, marked P or A, the course named by its
+// division with the kind glued on ("PhysicsT4", "Physics P4"). Made up.
+const regHeader = (page, y) => [
+  ...line(page, y, [24, 'Sr', 14], [539, 'Attenda', 48]),
+  ...line(page, y + 8, [140, 'Course Name', 81], [342, 'Date', 28], [398, 'Start Time', 65], [471, 'End Time', 60]),
+  ...line(page, y + 15, [21, 'No.', 21], [553, 'nce', 20]),
+];
+const regRow = (page, y, n, name, date, mark) =>
+  line(page, y, [29, String(n), 5], [55, name, name.length * 4.6], [330, date, 51], [405, '9:15:00 AM', 50], [473, '10:14:59 AM', 56], [559, mark, 8]);
+
+test('reads a register of single classes: P and A counted, NU and E left out', () => {
+  const r = readTable([
+    ...line(1, 279, [22, 'Attendance Report Duration :'], [221, 'From 01.07.2026 to 10.10.2026']),
+    ...regHeader(1, 306),
+    ...regRow(1, 345, 1, 'Organic ChemistryT4 BPH Sem-V Div-A', 'Jul 13, 2026', 'P'),
+    ...regRow(1, 375, 2, 'Organic Chemistry P4 BPH Sem-V Batch-B1', 'Jul 13, 2026', 'A'),
+    ...regRow(1, 405, 3, 'Organic ChemistryT4 BPH Sem-V Div-A', 'Jul 14, 2026', 'A'),
+    ...regRow(1, 435, 4, 'Pharmacology T4 BPH Sem-V A', 'Jul 14, 2026', 'P'),
+    ...regHeader(2, 40),
+    ...regRow(2, 80, 5, 'Organic Chemistry P4 BPH Sem-V Batch-B1', 'Jul 15, 2026', 'P'),
+    ...regRow(2, 110, 6, 'Pharmacology T4 BPH Sem-V A', 'Jul 15, 2026', 'NU'),
+    ...regRow(2, 140, 7, 'Pharmacology T4 BPH Sem-V A', 'Jul 16, 2026', 'E'),
+    ...line(2, 180, [22, 'P - Present : A - Absent : E - Exemption : L - Late Admission : NU - Not Updated', 470]),
+  ]);
+  assert.deepEqual(summary(r), [
+    ['Organic Chemistry', 'Theory 1/2, Practical 1/2'],
+    ['Pharmacology', 'Theory 1/1'],
+  ]);
+  assert.equal(r.rows, 7);
+  assert.equal(r.pending, 1);
+  assert.equal(r.excused, 1);
+  // Classes began on the first marked class, not on the first day of the report.
+  assert.equal(r.start, '2026-07-13');
+  assert.equal(r.asOf, '2026-07-15');
+});

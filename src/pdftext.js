@@ -8,8 +8,9 @@ import workerUrl from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url';
 
 pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
 
+// A register lists every class of the semester, one per row: 40 pages is not unusual.
 /** @returns {Promise<{ text: string, pieces: import('./table.js').Piece[] }>} y runs down the page. */
-export async function pdfText(buffer, maxPages = 20) {
+export async function pdfText(buffer, maxPages = 100) {
   // isEvalSupported: false keeps pdf.js from compiling anything found inside the file.
   const doc = await pdfjs.getDocument({ data: new Uint8Array(buffer), isEvalSupported: false }).promise;
   let text = '';
