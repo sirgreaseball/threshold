@@ -1083,6 +1083,49 @@ html:has(.dashboard),
   gap: 8px;
 }
 
+/* What happened to the files: added up, left out, not counted yet. */
+.review__note {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.review__end {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  font-size: 14px;
+}
+
+.review__end input {
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--hair);
+  border-radius: 9px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+}
+
+.review__end-hint {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.review__note[data-tone='edge'] {
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+
+.review__note[data-tone='danger'] {
+  color: var(--danger);
+}
+
 .check {
   display: flex;
   align-items: flex-start;

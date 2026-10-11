@@ -11,7 +11,7 @@ import { Liquid, invertText } from './liquid.js';
 import { percent, canMiss, mustAttend, status, forecast } from './core.js';
 import { story, timeline, word, Word } from './story.js';
 import { setPending } from './store.js';
-import { readReportFile, ReportError } from './report.js';
+import { readReportFiles, ReportError } from './report.js';
 import { fillIcons } from './icons.js';
 import { bindThemeToggle } from './theme.js';
 import { magnetize } from './magnet.js';
@@ -432,8 +432,8 @@ drop.addEventListener('drop', (e) => {
   e.preventDefault();
   dragDepth = 0;
   drop.classList.remove('is-over');
-  const f = e.dataTransfer.files[0];
-  if (f) handleReport(f);
+  const files = [...e.dataTransfer.files];
+  if (files.length) handleReports(files);
 });
 // Dropped beside the panel: do not let the browser navigate away to the file.
 addEventListener('dragover', (e) => hasFiles(e) && e.preventDefault());
@@ -441,16 +441,16 @@ addEventListener('drop', (e) => hasFiles(e) && e.preventDefault());
 
 drop.addEventListener('click', () => dropFile.click());
 dropFile.addEventListener('change', () => {
-  const f = dropFile.files[0];
+  const files = [...dropFile.files];
   dropFile.value = '';
-  if (f) handleReport(f);
+  if (files.length) handleReports(files);
 });
 
-async function handleReport(file) {
-  dropState('reading', 'Reading your report', file.name);
+async function handleReports(files) {
+  dropState('reading', files.length > 1 ? `Reading ${files.length} reports` : 'Reading your report', files.length > 1 ? 'Adding them up, course by course.' : files[0].name);
   pool.setLevel(80);
   try {
-    const report = await readReportFile(file);
+    const report = await readReportFiles(files);
     setPending(report);
     dropState('done', `Found ${plural(report.courses.length, 'course')}`, 'Opening your dashboard to check them.');
     pool.setLevel(108);

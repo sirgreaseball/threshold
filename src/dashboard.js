@@ -6,7 +6,7 @@ import { Skyline } from './skyline.js';
 import { evaluate, classesLeft, shortName, KINDS, TERM_WEEKS, parseDate, isoDate, daysBetween, startOfDay, weeklyFromCredits, sumParts, slack } from './plan.js';
 import { percent } from './core.js';
 import { blank, sample, uid, cleanState, cleanCourse, takePending, forgetSaved } from './store.js';
-import { readReportFile, readReportText, ReportError } from './report.js';
+import { readReportFiles, readReportText, ReportError } from './report.js';
 import { fillIcons } from './icons.js';
 import { bindThemeToggle } from './theme.js';
 import { magnetize } from './magnet.js';
@@ -130,12 +130,16 @@ function statsLine(v) {
   return `${left}: attend ${s.attend.text}, skip up to ${s.skip.text}`;
 }
 
-/** Semester dates as used for the maths: a missing end date is assumed 16 weeks after the start. */
+/**
+ * Semester dates as used for the maths. A missing end date is assumed 18 weeks
+ * after the start, the UGC's 90 teaching days, ending on the Friday before.
+ */
+const TERM_DAYS = 18 * 7 - 3;
 function assumedEnd(start) {
   const s = parseDate(start);
   if (!s) return '';
   const d = new Date(s);
-  d.setDate(d.getDate() + 16 * 7 - 3);
+  d.setDate(d.getDate() + TERM_DAYS);
   return isoDate(d);
 }
 const guessEnd = () => (state.term.end ? '' : assumedEnd(state.term.start));
@@ -355,7 +359,7 @@ function paintTerm() {
     const days = daysBetween(now, e);
     const span = days >= 14 ? plural(Math.round(days / 7), 'week') : plural(days, 'day');
     note = guess
-      ? `Assuming classes end 16 weeks after they began: ${span} left. Set the real date for exact numbers.`
+      ? `Assuming classes end 18 weeks after they began: ${span} left. Set the real date for exact numbers.`
       : `${span} of classes left${asOf ? ` from ${niceDate(asOf)}` : ''}.`;
   }
   els.termNote.textContent = note;
@@ -901,18 +905,18 @@ $('#import-drop').addEventListener('click', () => els.file.click());
 $('#empty-drop').addEventListener('click', () => els.file.click());
 
 els.file.addEventListener('change', () => {
-  const f = els.file.files[0];
+  const files = [...els.file.files];
   els.file.value = '';
-  if (f) readFile(f);
+  if (files.length) readFiles(files);
 });
 
-async function readFile(file) {
+async function readFiles(files) {
   openSheet(els.importDlg);
   $('#import-error').textContent = '';
-  $('#busy-text').textContent = `Reading ${file.name}`;
+  $('#busy-text').textContent = files.length > 1 ? `Reading ${files.length} reports` : `Reading ${files[0].name}`;
   step('busy');
   try {
-    const report = await readReportFile(file);
+    const report = await readReportFiles(files);
     review(report);
   } catch (err) {
     importError(err instanceof ReportError ? err.message : 'That file could not be read. Try pasting the table instead.');
@@ -936,21 +940,39 @@ function review(report) {
   const printed = report.courses.filter((c) => c.check);
   const off = printed.filter((c) => !c.check.ok).length;
   let lede = `Found ${plural(n, 'course')} with ${plural(report.courses.reduce((s, c) => s + c.parts.length, 0), 'row')} of classes.`;
+  const many = report.files > 1;
   if (printed.length) {
     lede += off
-      ? ` ${off === 1 ? 'One percentage does' : `${off} percentages do`} not match the report. Check the classes below.`
-      : ' Every percentage matches the report.';
+      ? ` ${off === 1 ? 'One percentage does' : `${off} percentages do`} not match ${many ? 'their reports' : 'the report'}. Check the classes below.`
+      : many
+        ? ' Every course matches the percentages on its reports.'
+        : ' Every percentage matches the report.';
   }
   $('#review-lede').textContent = lede;
   const facts = $('#review-facts');
-  facts.replaceChildren();
+  facts.replaceChildren(...reportNotes(report));
   if (report.rule) {
     facts.append(check('use-rule', `Use the report's minimum: ${report.rule}% in each course`, true));
+  } else {
+    const p = document.createElement('p');
+    p.className = 'review__note';
+    p.textContent = `The report does not say the minimum, so the dashboard keeps ${state.rule.min}%. Change it at the top if your college's is different.`;
+    facts.append(p);
   }
   if (report.start || report.asOf) {
     const bits = [report.start && `classes began ${niceDate(report.start)}`, report.asOf && `counts as of ${niceDate(report.asOf)}`].filter(Boolean);
-    facts.append(check('use-dates', `Use its dates: ${bits.join(', ')}`, true));
+    facts.append(check('use-dates', `Use ${many ? 'their' : 'its'} dates: ${bits.join(', ')}`, true));
   }
+  // The end of classes drives every estimate; a report never says it.
+  const end = document.createElement('label');
+  end.className = 'review__end';
+  end.innerHTML = '<span>Classes end on</span><input type="date" id="review-end" />';
+  const guess = assumedEnd(report.start);
+  const hint = document.createElement('span');
+  hint.className = 'review__end-hint';
+  hint.textContent = guess ? `Empty: about ${niceDate(guess)}, 18 weeks after classes began.` : 'Optional.';
+  end.append(hint);
+  facts.append(end);
   const list = $('#review-list');
   list.replaceChildren(
     ...report.courses.map((c, i) => {
@@ -971,7 +993,7 @@ function review(report) {
       pct.textContent = fmt(percent(attended, conducted));
       if (c.check) {
         pct.dataset.match = c.check.ok ? 'yes' : 'no';
-        if (!c.check.ok) pct.textContent += ` (report ${c.check.printed})`;
+        if (!c.check.ok) pct.textContent += c.check.printed ? ` (report ${c.check.printed})` : ' (not as reported)';
       }
       return li;
     }),
@@ -982,6 +1004,32 @@ function review(report) {
   step('review');
   $$('.review__name', list).forEach(fitName);
   if (!reduce) gsap.from($$('.review__item', list), { y: 10, opacity: 0, duration: 0.6, ease: 'expo.out', stagger: 0.03 });
+}
+
+/** What the review should say about the files themselves: what was added up, left out or not counted. */
+function reportNotes(report) {
+  const notes = [];
+  const note = (text, tone = '') => {
+    const p = document.createElement('p');
+    p.className = 'review__note';
+    p.dataset.tone = tone;
+    p.textContent = text;
+    notes.push(p);
+  };
+  const names = (list) => (list.length === 1 ? list[0] : `${list.slice(0, -1).join(', ')} and ${list.at(-1)}`);
+  if (report.files > 1) note(`Added up ${report.files} reports, course by course.`);
+  if (report.skipped?.length) {
+    const n = report.skipped.length;
+    note(`Left out ${names(report.skipped)}: ${n === 1 ? 'its dates fall' : 'their dates fall'} inside another report's, so those classes are counted already.`);
+  }
+  if (report.failed?.length) note(`Could not read ${names(report.failed)}.`, 'danger');
+  if (report.pending) note(`${plural(report.pending, 'class', 'classes')} not marked yet ${report.pending === 1 ? 'is' : 'are'} left out until ${report.pending === 1 ? 'it is' : 'they are'}.`);
+  if (report.excused) note(`${plural(report.excused, 'exempted or late-admission class', 'exempted or late-admission classes')} ${report.excused === 1 ? 'counts' : 'count'} for neither side.`);
+  // One month on its own is not the semester.
+  if (!(report.files > 1) && report.start && report.asOf && daysBetween(parseDate(report.start), parseDate(report.asOf)) < 40) {
+    note(`This report covers ${niceDate(report.start)} to ${niceDate(report.asOf)} only. For the whole semester, select every month's report together, or use the detailed one.`, 'edge');
+  }
+  return notes;
 }
 
 /** The total an import would assume without being told: classes held, plus the pace carried on to the assumed end. */
@@ -1039,7 +1087,8 @@ $('#review-go').addEventListener('click', () => {
   // nothing from an earlier report carries over; Undo brings it all back.
   commit(() => {
     if (useRule && report.rule) state.rule.min = report.rule;
-    state.term = { start: (useDates && report.start) || '', end: '', asOf: (useDates && report.asOf) || '' };
+    const endOn = $('#review-end', els.importDlg)?.value;
+    state.term = { start: (useDates && report.start) || '', end: parseDate(endOn) ? endOn : '', asOf: (useDates && report.asOf) || '' };
     state.courses = chosen.map((c) => cleanCourse({ id: uid(), name: c.name, credits: c.credits, total: c.total, parts: c.parts.map((p) => ({ ...p, id: uid() })) }));
   }, `Imported ${plural(chosen.length, 'course')}`);
   pending = null;
@@ -1070,8 +1119,8 @@ addEventListener('drop', (e) => {
   e.preventDefault();
   dragDepth = 0;
   document.body.classList.remove('is-dragging');
-  const f = e.dataTransfer.files[0];
-  if (f) readFile(f);
+  const files = [...e.dataTransfer.files];
+  if (files.length) readFiles(files);
 });
 
 /* ---------- First paint ---------- */
