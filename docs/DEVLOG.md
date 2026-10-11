@@ -514,3 +514,53 @@ How it was checked:
   - 72% needing 44 of 60, never 43.
 - **The law report, imported with each course's total typed into the review,** at 80% and then 72%, on desktop and a phone. Every row matched a hand calculation, with no errors and no sideways scroll.
 - **The full headless run passed:** import, every minimum, separate mode, reload, paste and sample. The README screenshots were retaken.
+
+## 26. Feedback: check it yourself first, and take the detailed report too
+
+My next note came with five of my own reports from my engineering school: the detailed register of every class from July to 10 October, and four monthly summaries for July, August, September and October. I asked for three things:
+- work out the numbers independently first, instead of trusting the app;
+- make the detailed register work too;
+- make sure the model holds up.
+
+**The independent count, done first, with nothing from the app.**
+- The PDFs were read with PyMuPDF, a different engine from the app's pdf.js, and parsed with fresh regular expressions.
+- The register has 338 classes, serial numbers 1 to 338 with no gaps, 4 of them not updated yet.
+- Counted per course and type, the register matched the sum of the four monthly reports in all 13 rows. That is two independent sources agreeing.
+- Each course's percentage, how many classes can be missed now and how many it takes to get back were then worked out by brute force, one class at a time.
+
+**What the app got wrong:**
+- **The register did not read at all.** It came out as one course called "Page". The table reader found the header, but:
+  - a course name written far left of its centred header fell into the serial-number column;
+  - the attendance column held P and A, not numbers.
+- **Monthly reports were each read correctly, one at a time,** and every percentage matched. But one month is not the semester, and the dashboard could only take one file.
+- **A monthly report runs to the end of its month,** so the October report said its counts were "as of 31 October", three weeks in the future.
+- **pdf.js stopped after 20 pages.** A full-semester register runs to about 25.
+- **The estimate of classes left depended on an assumed end date,** 16 weeks after classes began. A monthly report starts on the 1st, two weeks before classes did, so the same attendance gave very different estimates by route.
+
+What changed:
+- **A piece of text belongs to the header it sits under.** Only a piece under no header goes by its centre, as before. Every earlier report reads the same.
+- **Registers.**
+  - A row marked P is a class attended, and A is a class missed.
+  - NU (not updated), E (exemption) and L (late admission) count for neither side. The review says how many there were.
+  - The kind of class comes from the division code glued to the name: "NetworksT4" is theory, "P4" practical, "U4" tutorial and "S4" studio.
+  - The dates on the rows say when classes really began and when the last class was marked.
+- **Several files at once,** on the landing page and the dashboard.
+  - Reports are added up course by course and part by part.
+  - The widest report goes first, and any report whose dates overlap one already taken is left out and named. The detailed register dropped with the four monthly reports is counted once, not twice.
+  - A file that cannot be read is named, and the rest still import.
+- **A single month gets a warning:** "This report covers 1 Oct to 12 Oct only. For the whole semester, select every month's report together, or use the detailed one."
+- **Counts never run past today.** A report dated into the future is counted as of today.
+- **Up to 100 pages are read.**
+- **When classes end.** The review asks for the date. Left empty, classes are assumed to end 18 weeks after they began, the UGC's 90 teaching days, on the Friday before. For my school, 13 July plus 18 weeks is 13 November, the Friday before end-semester exams start on 16 November.
+- **A report that states no minimum says so.** The register has none, so the review says which minimum the dashboard keeps.
+
+How it was checked:
+- **The register alone, the four monthly reports together, and all five files at once** were imported in headless Chrome. All three gave the same attended and held counts as the independent count, in every course.
+- **The register's route was compared number by number** with an independent model written in Python. It covered 8 courses, five figures each: the percentage, classes left, the estimated total, must attend and can skip. All 40 matched.
+- **All five at once** left the four monthly reports out and named them.
+- **October alone** showed the one-month warning.
+- **The landing page took four files at once** and handed them to the dashboard.
+- **35 tests pass,** 4 of them new: a synthetic register with marks, a page break and a glued division code; monthly reports added up; a report inside another one left out; and a report that runs past today.
+- **The law report, totals, paste, sample and hand-off checks all still pass,** with no errors and no sideways scroll on a phone.
+
+What stays an estimate: without each course's total classes or the real end date, classes left comes from the pace so far. Monthly reports start on the 1st, so the pace counts a fortnight with no classes. The review asks for both: each course's total makes its numbers exact, and the real end date brings the estimate much closer.

@@ -118,6 +118,8 @@ flowchart LR
 - **It reads the page, not the order the text comes out in.** pdf.js gives every piece of text with its position. Threshold finds the header row and works out where each column runs. Header words stacked over two or three lines join the column under them. Every piece below goes to the column under its centre, so a name that wraps ("LAW OF TORTS AND" / "CONSUMER PROTECTION") rejoins its row, and a row cut by a page break carries on.
 - **Subjects, not class types.** The name comes from the course column. The type column (THEO, PRAC, TUTL, Lab, Seminar, Moot court…) only decides whether a row is theory, practical, tutorial or studio, and rows with the same course name become the parts of one course.
 - **Any table with a header.** Columns are known by their words: serial number, course or subject, code, type, held (conducted, delivered, total), attended (present), absent, percentage and credits. Absent-only columns, "23/27" fractions, separate theory and lab columns, merged course cells and totals rows are all handled.
+- **Registers too.** A detailed report lists every class on its own row, marked P or A. Each row is one class held; classes not marked yet, exempted or before a late admission count for neither side, and the review says how many. The course's kind comes from its division code ("NetworksT4" is theory, "P4" practical, "U4" tutorial), and the dates say when classes really began.
+- **One report a month, or all of them.** Select several files at once and they are added up, course by course. A report whose dates fall inside another one's is left out, so a monthly report dropped next to the detailed one never counts twice. A single month on its own gets a warning, since it is not the semester.
 - **Checked against the report.** Most reports print each course's percentage. The review step says whether every course adds up to it, so a misread never goes unnoticed.
 - **Exact with one more number.** Reports rarely say how many classes a course has in all, so the review step asks for each course's total this semester. It is usually 15 a credit, so 60 for a 4-credit course. Left empty, it is estimated from your pace.
 - **A fallback for the rest.** Text with no header row goes to the text reader, which anchors on type words ("THEO 30 27") or reads plain "name, held, attended" lines in any column order.
@@ -133,7 +135,7 @@ flowchart LR
 - **Four ways to know how many classes are left,** used in this order, since what the college plans beats an estimate:
   - **Total classes:** the classes the course has this semester, all types together. The import asks for it.
   - **Credits:** uses the AICTE definition, where 1 credit is 1 lecture hour or 2 lab hours a week, over a 15-week semester. That is 15 classes a credit, or 30 in a lab. Each lab or tutorial part takes one credit and theory gets the rest, so a 4-credit course with a tutorial comes out at 45 lectures and 15 tutorials, 60 in all.
-  - **Pace so far:** classes held ÷ weeks elapsed × weeks left. An estimate, and marked as one.
+  - **Pace so far:** classes held ÷ weeks elapsed × weeks left. An estimate, and marked as one. Without an end date, classes are assumed to end 18 weeks after they began, the UGC's 90 teaching days; the review asks for the real date.
   - **Per week:** you set the number for each part.
 
 <br>
@@ -262,7 +264,7 @@ You need Node 18 or newer.
 ```bash
 npm install
 npm run dev        # http://localhost:5173
-npm test           # 31 tests: maths, readers, planning, story
+npm test           # 35 tests: maths, readers, planning, story
 npm run build      # static site in dist/
 npm run preview    # serve the build
 ```
@@ -270,7 +272,8 @@ npm run preview    # serve the build
 The tests cover these areas:
 - **core:** every function against a brute-force count, plus the edge cases: no classes yet, exactly on the line, a 100% minimum, and attended above held.
 - **parse:** the text reader on a synthetic SAP-style report and on spreadsheet pastes in any column order, every way a minimum gets phrased, course names, and junk input.
-- **table:** the position reader on synthetic reports: a stacked header repeated on page two, TUTL rows, wrapped names, a row split by the page break, footnotes, codes, absent columns, fractions, merged cells, totals rows, counts split into theory and lab columns, and a course that does not add up to its printed percentage. Plus class types, names and dates in any common format.
+- **report:** monthly reports added up, a report inside another one left out, and a report that runs past today counted only to today.
+- **table:** the position reader on synthetic reports, including a register of single classes marked P, A, NU and E: a stacked header repeated on page two, TUTL rows, wrapped names, a row split by the page break, footnotes, codes, absent columns, fractions, merged cells, totals rows, counts split into theory and lab columns, and a course that does not add up to its printed percentage. Plus class types, names and dates in any common format.
 - **plan:** credits to weekly classes, all four ways of counting classes left and the order they are tried in, a semester counted the way students count it, combined and separate rules (with counts summed over the parts), course overrides and dates.
 - **story:** the landing story is true for every minimum from 50% to 95%.
 
@@ -298,6 +301,7 @@ Threshold was built on 10 October 2026 for the Coursera project *Playing with AI
 | **After launch** | Subtler hover, a landing page that explains itself, answers that follow your numbers, a frosted nav, text kept clear of the readout |
 | **2.0** | A report reader that works by position, for any school's report, checked against the printed percentages; the planner became the dashboard; nothing kept between visits |
 | **2.1** | Each course's total classes this semester, so the numbers are exact, and the semester spelled out the way students count it |
+| **2.2** | Detailed registers of every class, several monthly reports added up without counting twice, and every number checked against an independent count |
 
 Every decision, bug and fix is written up in **[docs/DEVLOG.md](docs/DEVLOG.md)**, and each release is in **[CHANGELOG.md](CHANGELOG.md)**.
 

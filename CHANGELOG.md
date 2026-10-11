@@ -22,11 +22,36 @@ Each release has a git tag (`v1.2.0` and so on).
 4. Bump `version` in `package.json`.
 5. Tag and push. Vercel deploys `main` on its own.
    ```bash
-   git tag -a v2.2.0 -m "Threshold 2.2.0"
+   git tag -a v2.3.0 -m "Threshold 2.3.0"
    git push origin main --tags
    ```
 
 ---
+
+## [2.2.0] - 2026-10-12
+
+Every kind of report, and every number checked twice.
+
+### Added
+- **Detailed registers.** A report that lists every class on its own row, marked P or A, now reads:
+  - each row is one class held;
+  - classes marked NU (not updated), E (exemption) or L (late admission) count for neither side, and the review says how many;
+  - the kind of class comes from the division code ("T4", "P4", "U4", "S4");
+  - the dates say when classes really began.
+- **Several files at once.** Monthly reports are added up course by course. A report whose dates fall inside another one's is left out and named, so nothing counts twice, and a file that cannot be read is named while the rest import.
+- The review asks when classes end, and says which minimum the dashboard keeps when a report states none.
+- A single month on its own gets a warning that it is not the semester.
+
+### Changed
+- Without an end date, classes are assumed to end 18 weeks after they began (the UGC's 90 teaching days), not 16.
+- Text belongs to the column header it sits under. Only text under no header goes by its centre.
+- PDFs are read up to 100 pages, not 20.
+
+### Fixed
+- A detailed register came out as one course called "Page".
+- A monthly report counted its classes as of the end of its month, even when that was in the future.
+
+Commits: `d0cb6b8` (registers), `6ce9d73` (several reports, the end date), and a docs commit with this entry. Dev log: [section 26](docs/DEVLOG.md#26-feedback-check-it-yourself-first-and-take-the-detailed-report-too).
 
 ## [2.1.0] - 2026-10-10
 
@@ -199,6 +224,7 @@ Rounds 1 and 2 were built before the repository existed. The first commit, `6199
 
   Dev log: sections 1 to 9.
 
+[2.2.0]: https://github.com/sirgreaseball/threshold/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/sirgreaseball/threshold/compare/v2.0.2...v2.1.0
 [2.0.2]: https://github.com/sirgreaseball/threshold/compare/v2.0.1...v2.0.2
 [2.0.1]: https://github.com/sirgreaseball/threshold/compare/v2.0.0...v2.0.1
