@@ -28,6 +28,27 @@ Each release has a git tag (`v1.2.0` and so on).
 
 ---
 
+## [2.3.0] - 2026-10-12
+
+### Added
+- **Number wheels** for every count: the minimum, the lab minimum, and each course's total classes, credits and classes a week. They scroll and snap like a phone's timer and work from the keyboard.
+- **The minimum is chosen at import**, on a wheel in the review. It starts from the report's own rule, or from your last choice. Each course in the review can be given its classes this semester.
+- **Settings are remembered** in first-party cookies: the minimum, the lab rule and the theme. Courses are still never stored.
+- **A ledger on the landing page:** the example course's semester, one square per class, filling in as the story scrolls.
+- **Security headers** on every page: a strict content security policy, no framing, no referrer, a permissions policy, and same-origin opener and resource policies.
+
+### Changed
+- The dashboard's bar and edges match the landing page's nav exactly.
+- Each beat of the landing story rests on the line and holds while the water tells its part, and the numbers wait with it. Below 1024px, the copy appears in place instead of rising across the ledger.
+- Built files are named by content hash alone, without licence banners. The notices are in `/legal.txt`. The animation libraries no longer leave globals on `window`.
+
+### Fixed
+- A course that has finished reads "Finished" and plans nothing more, once its total is set to the classes it held.
+- On phones, a dark band no longer shows below the water when the browser bars move.
+- Wheels no longer reset when the dashboard repaints.
+
+Commits: `0b137f2`, `e90d254`, `3e8fea2`, `7c6e717`, `339850d`, `9ac07fe`, `b09e40f`, `3ab49e7`. Dev log: [section 28](docs/DEVLOG.md#28-feedback-matching-pages-my-own-minimum-a-fuller-story-a-finished-course).
+
 ## [2.2.1] - 2026-10-12
 
 ### Fixed

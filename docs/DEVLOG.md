@@ -588,3 +588,40 @@ How it was checked, in headless Chrome on the dev server:
 
 The law report, paste, sample and hand-off checks still pass, and 35 tests pass.
 
+## 28. Feedback: matching pages, my own minimum, a fuller story, a finished course
+
+My next note came with screenshots, and asked for six things:
+- The dashboard's bar and edges did not line up with the landing page's.
+- An import quietly used 75%. I wanted to choose the minimum while confirming the import, and to have the site remember my settings.
+- Scrolling the landing page, the screen was mostly empty water between the lines of the story, on a laptop and on a phone.
+- On a phone, a dark band showed below the blue water, so in the dark theme the page read black, blue, black.
+- The numbers were still wrong for a course that had finished. It had far fewer classes than the dashboard assumed, and all of them had been held. I had attended all I needed and skipped the one I could, yet the dashboard still planned classes. I asked for a way to give each course its number of classes, picked by scrolling numbers like Apple's timer instead of typing them.
+- The site should be secure and say as little as possible about how it is built, because it is going out for everyone to use.
+
+What changed:
+- **Matching edges.** The dashboard's bar now has the landing nav's height (68px, 60px on phones), gutter and logo size. The page uses the full width with the same side gutter. At 1920, 1440 and 390px wide, the logo and the right edge sit in the same place on both pages.
+- **Number wheels.** Every count is picked on a wheel that snaps to each number, tilts its rows like a drum, and works with the arrow keys, Page Up, Page Down, Home and End. This covers the minimum, the lab minimum, and each course's total classes, credits and classes a week. A wheel commits only a value the user scrolled to, so a repaint of the page never moves it. An early version did: every repaint re-appended the rows, which reset the wheels' scroll.
+- **Choosing the minimum at import.** The review step opens with a minimum wheel. It is set from the report's own rule when the report states one, and from the last minimum used otherwise. Each course in the review has a "classes this semester" pill that opens a wheel, with a reset to the estimate.
+- **A course that has finished.** With its total set to the classes it held, a course has nothing left and reads "Finished", or "Finished below X%". A course whose classes have all been held now plans nothing more.
+- **Settings remembered in cookies.** The minimum, the lab rule and the theme are first-party cookies: `th_min`, `th_mode`, `th_labmin` and `th_theme`, kept for a year, SameSite=Lax, and Secure on https. Courses are still never stored. The theme's start-up script moved from an inline script to `/t.js`, so the pages need no inline script at all.
+- **A story that fills the screen.**
+  - A ledger of the example course's semester, one square per class, sits in the water beside the story. On narrower screens that are tall enough, it runs along the bottom instead. Past classes are already marked, and the story's own classes fill in as you scroll.
+  - Each beat's copy rests on the line like the hero, holds while the water tells its part, and dissolves as the next one arrives. The numbers wait with it.
+  - Below 1024px, rising copy would cross the ledger. There, each beat's copy appears in its place once the one before it has gone, and the ledger leaves before the stage scrolls it up through the last beat.
+  - The "Three questions" header is in two columns on wide screens.
+- **No band under the water on phones.** The stage is now as tall as the largest viewport (`lvh`), and the water's colour continues below the canvas, so collapsing browser bars never show the page behind.
+- **Security headers.** Every response carries:
+  - a content security policy that allows only the site's own scripts, styles, fonts, images and workers, with no inline scripts, no eval, no framing and no form posts elsewhere;
+  - `nosniff` and no referrer;
+  - a permissions policy that turns off the camera, microphone, location and payments;
+  - same-origin opener and resource policies.
+- **Saying less about the build.** Built files are named by their content hash alone, with no preload helper and no licence banners. The animation and scrolling libraries no longer leave their names and versions on `window`. The notices their licences require are in `/legal.txt`.
+
+One limit is worth stating plainly. Any website's code reaches the browser, so it can be read, however its files are named. What protects the work is its licence ("All rights reserved") and a private repository.
+
+How it was checked, in headless Chrome:
+- the 35 tests pass;
+- the wheels work in the review, the course drawer and the rule sheet, and a minimum of 82% survived a reload and reached the landing page;
+- the landing story was checked frame by frame on a phone (390×844), a tablet (820×1180) and a laptop (1366×768): no copy crosses the ledger, and there are no page errors;
+- the built site was checked under the new headers. On both pages, my own report read with every percentage matching, and a password-protected PDF and a damaged one each gave their own message, with no policy violations;
+- the live site after the deploy passed the same checks, and sends every header.

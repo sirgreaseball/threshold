@@ -153,6 +153,9 @@ flowchart LR
 - **One tank per course**, on a shared scale with your minimum as a dashed line. Tanks near the cursor swell like a dock, and the water reaches toward the pointer.
 - **Every row shows** classes left, how many you must attend and how many you can skip, without opening it. Change the minimum and every number follows.
 - **The whole semester, the way you count it.** Classes left sits beside the semester's total ("22 of 60", or "of ~48" when it is an estimate), and an opened course spells it out: *60 classes this semester. At 80% you need 48, so you can miss 12 in all. You have missed 7. Of the 22 left, attend 17 and you can skip 5.*
+- **Numbers on wheels.** Totals, credits, classes a week and minimums are picked on scroll wheels like a phone's timer. Flick or drag them, or use the arrow keys.
+- **Your minimum, chosen at import.** The review asks for it on a wheel. It starts at the report's own rule when the report prints one, and at your last choice otherwise.
+- **A course that is over says so.** Give it the number of classes it held and it reads *Finished*, with nothing left to plan.
 - **No dates yet?** The rows still say what the minimum allows today: how many classes you can miss now, or how many in a row it takes to get back.
 - **Percentages to two decimals**, rounded the way reports print them, so 77.78% on the report is 77.78% here. Nothing is ever rounded up onto the line: 79.996% shows as 79.99%.
 - **Log a class in one tap**, Present or Absent for each part, with an undo after every change.
@@ -175,7 +178,7 @@ flowchart LR
 </picture>
 </p>
 
-As you scroll, an example course skips classes. The water sinks, the line turns red, and then the course climbs back. The readout in the corner doubles as a progress bar, with one mark per class. Every number in the story is generated for whichever minimum you choose, so the copy is true at 70% just as it is at 85%. `tests/story.test.js` checks this for every minimum from 50% to 95%.
+As you scroll, an example course skips classes. The water sinks, the line turns red, and then the course climbs back. Beside it, a ledger of the course's semester, one square per class, fills in as the story goes. Every number in the story is generated for whichever minimum you choose, so the copy is true at 70% just as it is at 85%. `tests/story.test.js` checks this for every minimum from 50% to 95%.
 
 Then you try it on one of your own courses. The vessel fills to your attendance as you type, and the three answers below follow every number.
 
@@ -215,7 +218,7 @@ The layout uses `svh` units, so mobile browser bars never crop it. Inputs are 16
 | **Graphics** | Canvas 2D: height-field liquid, the tank chart, text inversion |
 | **PDF** | pdfjs-dist 4.10, legacy build, lazy-loaded; text positions read into a table |
 | **Type and icons** | Geist and Geist Mono via Fontsource, Phosphor icons inlined as SVG |
-| **Storage** | None for your data: courses live in memory. Only the theme is remembered |
+| **Storage** | None for your data: courses live in memory. Settings (the minimum, the lab rule, the theme) are first-party cookies |
 | **Hosting** | Vercel, deploys on every push to `main` |
 
 **Weight:** the landing page ships about 76 kB of gzipped JavaScript, and the dashboard about 52 kB. pdf.js (123 kB gzipped) loads only when someone imports a report.
@@ -281,9 +284,10 @@ The tests cover these areas:
 
 ## Privacy
 
-- No accounts, no server, no analytics, no cookies.
+- No accounts, no server, no analytics, no tracking.
 - **Nothing is saved.** Your courses live in the page's memory and are gone when you close or reload the tab. Versions before 2.0 kept them in `localStorage` under `threshold.v2`; that copy is deleted on your next visit.
-- The theme is the one thing remembered, under `threshold.theme`.
+- Your settings are remembered for a year in first-party cookies: the minimum (`th_min`), the lab rule (`th_mode`, `th_labmin`) and the theme (`th_theme`). They hold no course data, and the site has no server code that reads them.
+- Every page is served with a strict content security policy. Only the site's own files can run, no other site can frame it, and no referrer is sent.
 - A report dropped on the landing page reaches the dashboard through `sessionStorage` (`threshold.pending`), which is removed as soon as it is read.
 - PDFs are read on your device and never uploaded. Names and ID numbers on them are ignored.
 
@@ -302,6 +306,7 @@ Threshold was built on 10 October 2026 for the Coursera project *Playing with AI
 | **2.0** | A report reader that works by position, for any school's report, checked against the printed percentages; the planner became the dashboard; nothing kept between visits |
 | **2.1** | Each course's total classes this semester, so the numbers are exact, and the semester spelled out the way students count it |
 | **2.2** | Detailed registers of every class, several monthly reports added up without counting twice, and every number checked against an independent count |
+| **2.3** | Number wheels, the minimum chosen at import, settings remembered, a finished course that says so, a landing story that fills the screen, matching edges on both pages, and security headers |
 
 Every decision, bug and fix is written up in **[docs/DEVLOG.md](docs/DEVLOG.md)**, and each release is in **[CHANGELOG.md](CHANGELOG.md)**.
 
