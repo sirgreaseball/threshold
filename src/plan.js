@@ -88,6 +88,16 @@ export const PLAN_MODES = ['auto', 'total', 'credits', 'pace', 'weekly'];
 export const TERM_WEEKS = 15;
 
 /**
+ * Colleges plan a course in whole credits, so a course has 15, 30, 45 or 60
+ * classes, never 58. An estimated total lands on the nearest multiple of 15,
+ * and never below the classes already held.
+ */
+export function roundTotal(estimate, held = 0) {
+  const unit = TERM_WEEKS;
+  return Math.max(unit, Math.round(estimate / unit) * unit, Math.ceil(held / unit) * unit);
+}
+
+/**
  * Split n classes over a course's parts in proportion to the classes each has
  * held so far (evenly before any), so the shares add up to exactly n.
  */
@@ -139,7 +149,9 @@ export function classesLeft(course, term, today = new Date()) {
     if (!start) return none('no-start');
     const elapsed = daysBetween(start, asOf);
     if (elapsed < 14 || !parts.some((p) => p.conducted > 0)) return none('too-early');
-    return done(new Map(parts.map((p) => [p.id, Math.round(((p.conducted * 7) / elapsed) * weeksLeft)])), 'pace');
+    const held = parts.reduce((s, p) => s + p.conducted, 0);
+    const left = parts.reduce((s, p) => s + Math.round(((p.conducted * 7) / elapsed) * weeksLeft), 0);
+    return done(share(roundTotal(held + left, held) - held, parts), 'pace');
   };
   const fromWeekly = () => {
     if (!end) return none('no-end');

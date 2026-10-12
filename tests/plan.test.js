@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { weeklyFromCredits, classesLeft, evaluate, minFor, shortName, parseDate, daysBetween } from '../src/plan.js';
+import { weeklyFromCredits, classesLeft, evaluate, minFor, shortName, parseDate, daysBetween, roundTotal } from '../src/plan.js';
 
 const part = (id, kind, attended, conducted, extra = {}) => ({ id, kind, attended, conducted, ...extra });
 const weekly = (credits, parts) => Object.fromEntries(weeklyFromCredits(credits, parts));
@@ -20,12 +20,21 @@ test('credits to classes a week (1 credit = 1 lecture hour or 2 lab hours a week
 const term = { start: '2026-07-13', end: '2026-11-13', asOf: '2026-10-04' };
 const cn = () => ({ id: 'cn', name: 'Computer Networks', parts: [part('t', 'Theory', 21, 22), part('p', 'Practical', 20, 22)] });
 
+test('an estimated total lands on whole credits', () => {
+  assert.equal(roundTotal(58), 60);
+  assert.equal(roundTotal(20, 15), 15); // a one-credit course that has finished
+  assert.equal(roundTotal(42, 33), 45);
+  assert.equal(roundTotal(50, 47), 60); // never below what was held
+  assert.equal(roundTotal(3), 15);
+});
+
 test('classes left: pace so far, credits, weekly and planned totals', () => {
   // 22 classes in 83 days is about 1.86 a week; 40 days are left, so about 11 more of each.
   const pace = classesLeft(cn(), term);
   assert.equal(pace.source, 'pace');
-  assert.deepEqual(Object.fromEntries(pace.byPart), { t: 11, p: 11 });
-  assert.equal(pace.total, 22);
+  // 44 held at this pace makes about 66, which lands on 60: four credits.
+  assert.deepEqual(Object.fromEntries(pace.byPart), { t: 8, p: 8 });
+  assert.equal(pace.total, 16);
 
   // 3 credits plan 2 + 2 a week over a 15-week semester: 30 classes of each, 8 still to come.
   const cred = classesLeft({ ...cn(), plan: 'credits', credits: 3 }, term);
@@ -74,8 +83,8 @@ test('evaluate: combined counts against one minimum', () => {
   assert.equal(e.pct.toFixed(2), '93.18'); // matches the report
   assert.equal(e.status, 'safe');
   assert.equal(e.miss, 7);
-  // 41 of 44 now, 22 to come: finishing at 80% needs 53 of 66, so 10 can be skipped.
-  assert.deepEqual(e.end, { total: 66, needed: 53, maxSkip: 10, reachable: true, best: (63 * 100) / 66 });
+  // 41 of 44 now, 16 to come (the pace lands on 60): finishing at 80% needs 48 of 60, so 9 can be skipped.
+  assert.deepEqual(e.end, { total: 60, needed: 48, maxSkip: 9, reachable: true, best: 95 });
 });
 
 test('evaluate: separate minimums per type, worst part leads', () => {
@@ -91,14 +100,14 @@ test('evaluate: in separate mode the counts add up over the parts', () => {
   const e = evaluate(course, { min: 75, mode: 'separate', labMin: null }, term);
   assert.equal(e.status, 'edge'); // the practical has nothing to spare
   assert.equal(e.miss, 4); // so all four are theory classes
-  assert.equal(e.left, 27); // 17 theory and 10 practical still to come
-  assert.equal(e.end.maxSkip, 9); // 7 theory and 2 practical can be skipped
+  assert.equal(e.left, 34); // 56 held at this pace lands on 90: 22 theory and 12 practical to come
+  assert.equal(e.end.maxSkip, 11); // 8 theory and 3 practical can be skipped
   assert.equal(e.end.reachable, true);
-  // At 85% for labs, 25 of 30 practicals is the best case: short of the line, whatever the theory does.
+  // At 85% for labs, 27 of 32 practicals is the best case: short of the line, whatever the theory does.
   const strict = evaluate(course, { min: 75, mode: 'separate', labMin: 85 }, term);
   assert.equal(strict.end.reachable, false);
   assert.equal(strict.endKind, 'Practical');
-  assert.equal(strict.end.best.toFixed(2), '83.33');
+  assert.equal(strict.end.best.toFixed(2), '84.38');
 });
 
 test('a course minimum overrides the college one', () => {
