@@ -564,3 +564,27 @@ How it was checked:
 - **The law report, totals, paste, sample and hand-off checks all still pass,** with no errors and no sideways scroll on a phone.
 
 What stays an estimate: without each course's total classes or the real end date, classes left comes from the pace so far. Monthly reports start on the 1st, so the pace counts a fortnight with no classes. The review asks for both: each course's total makes its numbers exact, and the real end date brings the estimate much closer.
+
+## 27. Feedback: "why can't I upload my PDF?"
+
+My next note said only that I could not upload my PDF, with no message, no page and no file named.
+
+**Reproducing it first.** On the live site, through the real file picker, my own report uploaded and reached the review on desktop and on a phone, from both the landing page and the dashboard. There were no errors and no failed requests. So the upload path itself worked, and the cause had to sit around it. Three things could make an upload fail with no useful message:
+- **A page open across a release.** Three releases went out that day. The PDF reader is loaded only on first use, from a file whose name changes with each release. A page opened before the release asks for a file that is gone. The import failed with "That file could not be read. Try pasting the table instead.", which says nothing about the real problem.
+- **One message for every PDF error.** A damaged file, or a reader that failed to start, was blamed on a password.
+- **Drops beside the panel.** On the landing page, a file dropped anywhere but the drop panel was quietly ignored. Only the browser's own behaviour, opening the file, was blocked.
+
+What changed:
+- A reader that cannot be loaded says "Threshold was updated while this page was open. Reload the page, then drop the file again."
+- pdf.js errors are told apart. A password-protected PDF and a damaged file each get their own message; anything else is the reader failing to start, and gets the reload message.
+- A file dropped anywhere on the landing page is read, and the page scrolls to the panel so the progress shows.
+
+How it was checked, in headless Chrome on the dev server:
+- a good report reached the review;
+- with the reader's file blocked, as a page from before a release would see it, the import gave the reload message;
+- a password-protected PDF and a damaged one each gave their own message;
+- a good file and a damaged one together imported the good one and named the other;
+- a file dropped on the landing page's headline opened the dashboard with the review.
+
+The law report, paste, sample and hand-off checks still pass, and 35 tests pass.
+

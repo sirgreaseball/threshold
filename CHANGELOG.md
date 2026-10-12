@@ -28,6 +28,16 @@ Each release has a git tag (`v1.2.0` and so on).
 
 ---
 
+## [2.2.1] - 2026-10-12
+
+### Fixed
+- **Uploads that failed without saying why.**
+  - A page left open across a release could not load the PDF reader and said only "That file could not be read". It now says Threshold was updated and asks for a reload.
+  - A password-protected PDF, a damaged file and a reader that failed to start each get their own message. They used to share one that blamed a password.
+- On the landing page, a file dropped anywhere outside the drop panel was ignored. It is now read, and the panel scrolls into view.
+
+Commit: `10bcc91`. Dev log: [section 27](docs/DEVLOG.md#27-feedback-why-cant-i-upload-my-pdf).
+
 ## [2.2.0] - 2026-10-12
 
 Every kind of report, and every number checked twice.
@@ -224,6 +234,7 @@ Rounds 1 and 2 were built before the repository existed. The first commit, `6199
 
   Dev log: sections 1 to 9.
 
+[2.2.1]: https://github.com/sirgreaseball/threshold/compare/v2.2.0...v2.2.1
 [2.2.0]: https://github.com/sirgreaseball/threshold/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/sirgreaseball/threshold/compare/v2.0.2...v2.1.0
 [2.0.2]: https://github.com/sirgreaseball/threshold/compare/v2.0.1...v2.0.2
