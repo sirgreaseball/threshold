@@ -91,16 +91,27 @@
 .stage__sticky {
   position: sticky;
   top: 0;
-  height: 100svh;
+  /* The whole screen, even once a phone's address bar slides away (the large
+     viewport); the water keeps the small viewport's scale, and below it the
+     water simply carries on, so no strip of page shows under it. */
+  height: 100vh;
+  height: 100lvh;
   overflow: hidden;
 }
 
 .stage__canvas {
   position: absolute;
-  inset: 0;
+  inset: 0 0 auto;
   width: 100%;
-  height: 100%;
+  height: 100svh;
   display: block;
+}
+
+.stage__sticky::after {
+  content: '';
+  position: absolute;
+  inset: 100svh 0 0;
+  background: var(--accent);
 }
 
 /* The beats sit over the sticky stage (a sticky element is its own stacking
@@ -108,7 +119,8 @@
    the readout and its minimum picker; links and buttons in the copy still work. */
 .beats {
   position: relative;
-  margin-top: -100svh;
+  margin-top: -100vh;
+  margin-top: -100lvh;
   pointer-events: none;
 }
 
