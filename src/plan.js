@@ -88,14 +88,16 @@ export const PLAN_MODES = ['auto', 'total', 'credits', 'pace', 'weekly'];
 export const TERM_WEEKS = 15;
 
 /**
- * Colleges plan a course in whole credits, so a course has 15, 30, 45 or 60
- * classes, never 58. An estimated total lands on the nearest multiple of 15, up
- * to four credits (a larger course is set by hand), and never below the classes
- * already held.
+ * Colleges plan a course in whole credits: a credit is an hour a week over 15
+ * teaching weeks (UGC, AICTE), so 15 classes, or 30 for a lab credit. A course
+ * has 15, 30, 45, 60, 75 or 90 classes, never 58. An estimated total lands on a
+ * whole number of credits, never below the classes already held. It leans a
+ * quarter of a credit down, because the rest of a term loses classes to tests
+ * and holidays, so the pace so far runs high.
  */
 export function roundTotal(estimate, held = 0) {
   const unit = TERM_WEEKS;
-  return Math.max(unit, Math.min(Math.round(estimate / unit), 4) * unit, Math.ceil(held / unit) * unit);
+  return Math.max(unit, Math.round(estimate / unit - 0.25) * unit, Math.ceil(held / unit) * unit);
 }
 
 /**
