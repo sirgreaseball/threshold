@@ -16,15 +16,26 @@ export class ReportError extends Error {}
 
 const isPdf = (file) => file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
 
+// A page left open across a release asks for files the new release no longer has.
+const STALE = 'Threshold was updated while this page was open. Reload the page, then drop the file again.';
+
 export async function readReportFile(file) {
   if (file.size > 15 * 1024 * 1024) throw new ReportError('That file is over 15 MB. An attendance report is usually under 1 MB.');
   if (!isPdf(file)) return readReportText(await file.text());
-  const { pdfText } = await import('./pdftext.js');
+  let pdfText;
+  try {
+    ({ pdfText } = await import('./pdftext.js'));
+  } catch {
+    throw new ReportError(STALE);
+  }
   let pdf;
   try {
     pdf = await pdfText(await file.arrayBuffer());
-  } catch {
-    throw new ReportError('That PDF could not be opened. If it is password-protected, open it and save a copy without the password.');
+  } catch (err) {
+    if (err?.name === 'PasswordException') throw new ReportError('That PDF is password-protected. Open it, save a copy without the password, and drop that in.');
+    if (err?.name === 'InvalidPDFException') throw new ReportError('That file is damaged or is not really a PDF. Download the report again from your portal.');
+    // The reader itself failed to start: almost always a page from before a release.
+    throw new ReportError(STALE);
   }
   if (!pdf.text.trim()) throw new ReportError('That PDF has no text in it, it is probably a scan. Copy the table from your portal and paste it instead.');
   const text = parseReport(pdf.text);

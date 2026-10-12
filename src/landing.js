@@ -435,9 +435,16 @@ drop.addEventListener('drop', (e) => {
   const files = [...e.dataTransfer.files];
   if (files.length) handleReports(files);
 });
-// Dropped beside the panel: do not let the browser navigate away to the file.
+// Dropped anywhere else on the page: read it all the same, and bring the panel into view.
 addEventListener('dragover', (e) => hasFiles(e) && e.preventDefault());
-addEventListener('drop', (e) => hasFiles(e) && e.preventDefault());
+addEventListener('drop', (e) => {
+  if (!hasFiles(e) || drop.contains(e.target)) return;
+  e.preventDefault();
+  const files = [...e.dataTransfer.files];
+  if (!files.length) return;
+  lenis ? lenis.scrollTo(drop, { duration: 1.2, offset: -120 }) : drop.scrollIntoView({ block: 'center' });
+  handleReports(files);
+});
 
 drop.addEventListener('click', () => dropFile.click());
 dropFile.addEventListener('change', () => {
