@@ -642,3 +642,20 @@ How it was checked:
 - With my own report, the review now estimates 60 for five courses, 45 for two and 15 for one, which matches my timetable.
 - In headless Chrome, the one-credit pick set the pill and the wheel to 15, and the three-credit pick in a course's drawer set the total to 45, with no page errors, on desktop and on a phone.
 
+## 30. Feedback: a wheel that jumps
+
+My next note was a screenshot of a course's minimum wheel. It started at "College, 80%", and the next stop down was 40%, then 41%, so the wheel seemed to run backwards.
+
+**The cause.** The stop that means "go by the college's minimum" was placed before every number, so it sat above 40%. The lab minimum's "Same" stop had the same layout.
+
+What changed:
+- Both wheels run from 40% to 100% in order. The stop that follows the rule stands where its number is, so it reads 79%, College 80%, 81%.
+- Turning to that stop still means "follow the rule": it moves with the college's minimum.
+- The lab wheel is rebuilt when the main minimum changes, so its "Same" stop moves with it.
+
+How it was checked, in headless Chrome:
+- the course wheel reads 73%, 74%, College 75%, 76%, 77% around the stop;
+- the lab wheel reads the same way around "Same, 75%", and after the main minimum changed to 85% it read 83%, 84%, Same 85%, 86%, 87%;
+- stepping a course's minimum to 75% with the keyboard still works;
+- 36 tests pass, with no page errors.
+

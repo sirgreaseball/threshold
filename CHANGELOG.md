@@ -28,6 +28,13 @@ Each release has a git tag (`v1.2.0` and so on).
 
 ---
 
+## [2.4.1] - 2026-10-12
+
+### Fixed
+- **Minimum wheels in order.** A course's minimum wheel showed "College, 80%" first and then jumped to 40%. The lab minimum's "Same" stop did the same. Both now run from 40% to 100% in order, with that stop standing at its own number: 79%, College 80%, 81%.
+
+Commit: `53f6913`. Dev log: [section 30](docs/DEVLOG.md#30-feedback-a-wheel-that-jumps).
+
 ## [2.4.0] - 2026-10-12
 
 ### Changed
