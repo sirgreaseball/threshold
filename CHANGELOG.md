@@ -28,6 +28,14 @@ Each release has a git tag (`v1.2.0` and so on).
 
 ---
 
+## [2.5.0] - 2026-10-12
+
+### Changed
+- **Totals for any course, not just four-credit ones.** Estimated totals are no longer capped at 60, because law and lab-heavy courses often run 75 or 90 classes. An estimate still lands on a whole number of credits, and leans a quarter of a credit down, because the rest of a term loses classes to tests and holidays.
+- **Credit picks from one to six credits** (15 to 90 classes). The note beside them says a lab credit is usually 30 classes.
+
+Commits: `8f7e4fe`, `ec39219`. Dev log: [section 31](docs/DEVLOG.md#31-feedback-every-course-not-just-mine).
+
 ## [2.4.1] - 2026-10-12
 
 ### Fixed

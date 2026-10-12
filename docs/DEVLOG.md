@@ -659,3 +659,30 @@ How it was checked, in headless Chrome:
 - stepping a course's minimum to 75% with the keyboard still works;
 - 36 tests pass, with no page errors.
 
+## 31. Feedback: every course, not just mine
+
+My next note asked for more than four credits in the picks, since some students have more classes per course. It also asked me not to fit the app to my own timetable, because Threshold is meant for anyone in the university, a law student as much as an engineer.
+
+**What the rules say.** College and university regulations that follow the UGC's credit system all count credits the same way:
+- one credit is one hour a week of lecture or tutorial, or two hours of practical work, over a semester of 15 teaching weeks;
+- so a credit is about 15 classes, and a lab credit about 30, with the remaining weeks of the semester kept for exams.
+
+Some colleges count a practical credit as one and a half hours a week instead.
+
+**Law degrees.** Law syllabi follow the same rule:
+- courses usually carry 4 or 5 credits, which is 60 to 75 classes;
+- the Bar Council's 240 credits over ten semesters average about 24 credits a semester.
+
+**The cap was my own timetable.** Capping estimates at 60 matched my courses but would be wrong for a five-credit law course or a course with a two-credit lab.
+
+What changed:
+- **No cap.** An estimated total lands on a whole number of credits at any size.
+- **A downward lean.** The estimate leans a quarter of a credit down, because the pace so far runs high: later weeks lose classes to tests, festivals and the last days before exams. An estimate has to reach four and three-quarter credits (about 71 classes) before it shows 75.
+- **More picks.** The credit picks run from one to six credits (15 to 90 classes). The note beside them says a lab credit is usually 30.
+
+How it was checked:
+- 36 tests pass. The new ones cover 69 landing on 60, a five-credit course at 75, and 118 landing on 120.
+- My own report: seven of eight estimates match my timetable. Operating Systems shows about 75, and one tap on 60 sets it.
+- A friend's law report gives estimates of 30 to 75, which fits four- and five-credit law courses.
+- The picks wrap cleanly into two columns on a phone, with no page errors.
+
