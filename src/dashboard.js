@@ -599,18 +599,25 @@ function paintPlan(row, c, v) {
   fc.dataset.tone = v.end && !v.end.reachable ? 'danger' : '';
 }
 
-/** A course's own minimum, on a wheel whose first stop is the college's. */
+/**
+ * 40% to 100% in order, with null ("go by the rule") standing where the rule's
+ * own number would be, so the wheel reads 79%, College 80%, 81%.
+ */
+const minValues = (base) => range(40, 100).map((n) => (n === base ? null : n));
+const ownMin = (n, base) => (n == null || n === base ? null : n);
+
+/** A course's own minimum, on a wheel whose college stop sits at the college's number. */
 function paintMin(row, c) {
   const box = $('.drawer__min', row.el);
   const sig = String(state.rule.min);
   if (box.dataset.sig === sig && row.minWheel) {
-    row.minWheel.set(c.min);
+    row.minWheel.set(ownMin(c.min, state.rule.min));
     return;
   }
   box.dataset.sig = sig;
   row.minWheel = wheel({
-    values: [null, ...range(40, 100)],
-    value: c.min,
+    values: minValues(state.rule.min),
+    value: ownMin(c.min, state.rule.min),
     format: (n) => (n == null ? `College, ${state.rule.min}%` : `${n}%`),
     label: `${c.name}: minimum attendance`,
     rows: 3,
@@ -887,15 +894,24 @@ const ruleWheel = wheel({
   onChange: (n) => setRule(() => (state.rule.min = n)),
 });
 $('#rule-wheel').replaceWith(ruleWheel.el);
-const labWheel = wheel({
-  values: [null, ...range(40, 100)],
-  value: state.rule.labMin,
-  format: (n) => (n == null ? 'Same' : `${n}%`),
-  label: 'Practical and studio minimum',
-  rows: 3,
-  onChange: (n) => setRule(() => (state.rule.labMin = n)),
-});
-$('#rule-lab-wheel').replaceWith(labWheel.el);
+// The lab minimum's "same" stop sits at the main minimum, so it is rebuilt when that changes.
+let labWheel = null;
+function paintLabWheel(min, labMin) {
+  if (labWheel?.base !== min) {
+    const w = wheel({
+      values: minValues(min),
+      value: ownMin(labMin, min),
+      format: (n) => (n == null ? `Same, ${min}%` : `${n}%`),
+      label: 'Practical and studio minimum',
+      rows: 3,
+      onChange: (n) => setRule(() => (state.rule.labMin = n)),
+    });
+    w.base = min;
+    (labWheel ? labWheel.el : $('#rule-lab-wheel')).replaceWith(w.el);
+    labWheel = w;
+  }
+  labWheel.set(ownMin(labMin, min));
+}
 
 function paintRuleDialog() {
   const { min, mode, labMin } = state.rule;
@@ -903,7 +919,7 @@ function paintRuleDialog() {
   ruleWheel.set(min);
   $$('input[name="rule-mode"]').forEach((r) => (r.checked = r.value === mode));
   $('#rule-lab-wrap').hidden = mode !== 'separate';
-  labWheel.set(labMin);
+  paintLabWheel(min, labMin);
 }
 
 function setRule(change) {
