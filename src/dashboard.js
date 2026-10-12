@@ -1124,7 +1124,7 @@ $('#review-list').addEventListener('click', (e) => {
   });
   const side = document.createElement('div');
   side.className = 'review__wheel-side';
-  side.innerHTML = '<b>Classes this semester</b><span>All types together, 15 for each credit. A course that has finished has as many as it held.</span>';
+  side.innerHTML = '<b>Classes this semester</b><span>All types together: about 15 for each credit, 30 for a lab credit. A course that has finished has as many as it held.</span>';
   side.append(picks);
   if (t.est) {
     const reset = document.createElement('button');
@@ -1181,7 +1181,7 @@ function creditPicks(current, pick) {
   box.className = 'credit-picks';
   box.setAttribute('role', 'group');
   box.setAttribute('aria-label', 'Classes by credits');
-  for (const cr of [1, 2, 3, 4]) {
+  for (const cr of [1, 2, 3, 4, 5, 6]) {
     const n = cr * TERM_WEEKS;
     const b = document.createElement('button');
     b.type = 'button';
