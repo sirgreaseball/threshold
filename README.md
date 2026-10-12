@@ -152,8 +152,9 @@ flowchart LR
 - **The headline is the one thing to know right now:** which course is below the line, or which has the least room.
 - **One tank per course**, on a shared scale with your minimum as a dashed line. Tanks near the cursor swell like a dock, and the water reaches toward the pointer.
 - **Every row shows** classes left, how many you must attend and how many you can skip, without opening it. Change the minimum and every number follows.
-- **The whole semester, the way you count it.** Classes left sits beside the semester's total ("22 of 60", or "of ~48" when it is an estimate), and an opened course spells it out: *60 classes this semester. At 80% you need 48, so you can miss 12 in all. You have missed 7. Of the 22 left, attend 17 and you can skip 5.*
-- **Numbers on wheels.** Totals, credits, classes a week and minimums are picked on scroll wheels like a phone's timer. Flick or drag them, or use the arrow keys.
+- **The whole semester, the way you count it.** Classes left sits beside the semester's total ("22 of 60", or "of ~45" when it is an estimate), and an opened course spells it out: *60 classes this semester. At 80% you need 48, so you can miss 12 in all. You have missed 7. Of the 22 left, attend 17 and you can skip 5.*
+- **Numbers on wheels.** Totals, credits, classes a week and minimums are picked on scroll wheels like a phone's timer. Flick or drag them, or use the arrow keys. A course's total also has one-tap picks by credits: 15, 30, 45 or 60 classes.
+- **Estimates in whole credits.** Without a total, the semester is estimated from the pace so far and lands on a whole number of credits (15 classes each, up to 60), never on something like 58.
 - **Your minimum, chosen at import.** The review asks for it on a wheel. It starts at the report's own rule when the report prints one, and at your last choice otherwise.
 - **A course that is over says so.** Give it the number of classes it held and it reads *Finished*, with nothing left to plan.
 - **No dates yet?** The rows still say what the minimum allows today: how many classes you can miss now, or how many in a row it takes to get back.
@@ -306,6 +307,7 @@ Threshold was built on 10 October 2026 for the Coursera project *Playing with AI
 | **2.0** | A report reader that works by position, for any school's report, checked against the printed percentages; the planner became the dashboard; nothing kept between visits |
 | **2.1** | Each course's total classes this semester, so the numbers are exact, and the semester spelled out the way students count it |
 | **2.2** | Detailed registers of every class, several monthly reports added up without counting twice, and every number checked against an independent count |
+| **2.4** | Estimated totals in whole credits, and credit picks beside every total |
 | **2.3** | Number wheels, the minimum chosen at import, settings remembered, a finished course that says so, a landing story that fills the screen, matching edges on both pages, and security headers |
 
 Every decision, bug and fix is written up in **[docs/DEVLOG.md](docs/DEVLOG.md)**, and each release is in **[CHANGELOG.md](CHANGELOG.md)**.

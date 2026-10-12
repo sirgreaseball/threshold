@@ -625,3 +625,20 @@ How it was checked, in headless Chrome:
 - the landing story was checked frame by frame on a phone (390×844), a tablet (820×1180) and a laptop (1366×768): no copy crosses the ledger, and there are no page errors;
 - the built site was checked under the new headers. On both pages, my own report read with every percentage matching, and a password-protected PDF and a damaged one each gave their own message, with no policy violations;
 - the live site after the deploy passed the same checks, and sends every header.
+
+## 29. Feedback: totals in whole credits
+
+My next note said the import was guessing totals like 58 classes. Colleges do not plan a course that way: a course has 15 classes for each credit, so 15, 30, 45 or 60. My one-credit course had 15, two three-credit courses had 45, and the rest had 60. I asked for the estimate to follow that rule, and for quick picks by credits beside the wheel.
+
+**Checking the rule.** AICTE and UGC count one credit as one lecture hour a week over a semester of about 15 teaching weeks, which is 15 classes. I could not find an NMIMS document that states it in those words, so the rule rests on that convention and on my own timetable, which matches it.
+
+What changed:
+- **Whole credits.** The pace estimate now rounds a course's total to the nearest multiple of 15. It never goes below the classes already held, and stops at 60 (four credits) unless more than that have been held. What is left is shared over the parts in proportion, as before. An exact total, or credits, still beats any estimate.
+- **Credit picks.** The "classes this semester" wheel in the import review and in a course's drawer has picks for one to four credits beside it. A tap sets the total and turns the wheel to match. The wheel is still there for any other number.
+- **Wording.** "You can skip all 1 left" now reads "You can skip the one left".
+
+How it was checked:
+- 36 tests pass, including new ones for the rounding: 58 becomes 60, a finished one-credit course stays at 15, and nothing goes below what was held.
+- With my own report, the review now estimates 60 for five courses, 45 for two and 15 for one, which matches my timetable.
+- In headless Chrome, the one-credit pick set the pill and the wheel to 15, and the three-credit pick in a course's drawer set the total to 45, with no page errors, on desktop and on a phone.
+

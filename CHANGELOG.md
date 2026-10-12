@@ -28,6 +28,19 @@ Each release has a git tag (`v1.2.0` and so on).
 
 ---
 
+## [2.4.0] - 2026-10-12
+
+### Changed
+- **Estimated totals land on whole credits.** A course is planned in credits of 15 classes, so an estimate from the pace so far now rounds to 15, 30, 45 or 60, never to 58. It never goes below the classes already held, and above 60 only when more than 60 have been held.
+
+### Added
+- **Credit picks** beside the "classes this semester" wheels, in the import review and in a course's drawer: one to four credits, 15 to 60 classes, in one tap. The wheel stays for any other number.
+
+### Fixed
+- A course with one class left reads "You can skip the one left" instead of "all 1 left".
+
+Commits: `5af7577`, `b060b8b`, `bcbf6f7`. Dev log: [section 29](docs/DEVLOG.md#29-feedback-totals-in-whole-credits).
+
 ## [2.3.0] - 2026-10-12
 
 ### Added
