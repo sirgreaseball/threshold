@@ -89,12 +89,13 @@ export const TERM_WEEKS = 15;
 
 /**
  * Colleges plan a course in whole credits, so a course has 15, 30, 45 or 60
- * classes, never 58. An estimated total lands on the nearest multiple of 15,
- * and never below the classes already held.
+ * classes, never 58. An estimated total lands on the nearest multiple of 15, up
+ * to four credits (a larger course is set by hand), and never below the classes
+ * already held.
  */
 export function roundTotal(estimate, held = 0) {
   const unit = TERM_WEEKS;
-  return Math.max(unit, Math.round(estimate / unit) * unit, Math.ceil(held / unit) * unit);
+  return Math.max(unit, Math.min(Math.round(estimate / unit), 4) * unit, Math.ceil(held / unit) * unit);
 }
 
 /**

@@ -26,6 +26,8 @@ test('an estimated total lands on whole credits', () => {
   assert.equal(roundTotal(42, 33), 45);
   assert.equal(roundTotal(50, 47), 60); // never below what was held
   assert.equal(roundTotal(3), 15);
+  assert.equal(roundTotal(80, 40), 60); // four credits at most, unless more were held
+  assert.equal(roundTotal(80, 62), 75);
 });
 
 test('classes left: pace so far, credits, weekly and planned totals', () => {
@@ -100,14 +102,14 @@ test('evaluate: in separate mode the counts add up over the parts', () => {
   const e = evaluate(course, { min: 75, mode: 'separate', labMin: null }, term);
   assert.equal(e.status, 'edge'); // the practical has nothing to spare
   assert.equal(e.miss, 4); // so all four are theory classes
-  assert.equal(e.left, 34); // 56 held at this pace lands on 90: 22 theory and 12 practical to come
-  assert.equal(e.end.maxSkip, 11); // 8 theory and 3 practical can be skipped
+  assert.equal(e.left, 4); // 56 held lands on 60, four credits: 3 theory and 1 practical to come
+  assert.equal(e.end.maxSkip, 3); // the 3 theory classes can be skipped, the practical cannot
   assert.equal(e.end.reachable, true);
-  // At 85% for labs, 27 of 32 practicals is the best case: short of the line, whatever the theory does.
+  // At 85% for labs, 16 of 21 practicals is the best case: short of the line, whatever the theory does.
   const strict = evaluate(course, { min: 75, mode: 'separate', labMin: 85 }, term);
   assert.equal(strict.end.reachable, false);
   assert.equal(strict.endKind, 'Practical');
-  assert.equal(strict.end.best.toFixed(2), '84.38');
+  assert.equal(strict.end.best.toFixed(2), '76.19');
 });
 
 test('a course minimum overrides the college one', () => {
