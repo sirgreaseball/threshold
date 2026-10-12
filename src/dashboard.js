@@ -173,7 +173,7 @@ function forecastLine(j, exact, kind = '') {
   }
   const spare = e.total - e.needed;
   const rest =
-    e.maxSkip === 0 ? `Attend all ${left} left.` : e.maxSkip >= left ? `You can skip all ${left} left.` : `Of the ${left} left, attend ${left - e.maxSkip} and you can skip ${e.maxSkip}.`;
+    e.maxSkip === 0 ? (left === 1 ? 'Attend the one left.' : `Attend all ${left} left.`) : e.maxSkip >= left ? (left === 1 ? 'You can skip the one left.' : `You can skip all ${left} left.`) : `Of the ${left} left, attend ${left - e.maxSkip} and you can skip ${e.maxSkip}.`;
   return `${lead}${semester} At ${min}% you need ${e.needed}, so you can miss ${spare} in all. You have missed ${missed}. ${rest}`;
 }
 
@@ -556,11 +556,14 @@ function paintPlan(row, c, v) {
       paintAll();
     };
     if (mode === 'total') {
-      add(
-        'Classes this semester',
-        wheel({ values: range(1, 300), value: c.total, label: `${c.name}: classes this semester`, rows: 3, onChange: (n) => edit(() => (find(c.id).total = n)) }),
-        (x) => x.total,
-      );
+      const w = wheel({ values: range(1, 300), value: c.total, label: `${c.name}: classes this semester`, rows: 3, onChange: (n) => edit(() => (find(c.id).total = n)) });
+      add('Classes this semester', w, (x) => x.total);
+      const picks = creditPicks(c.total, (n) => {
+        w.set(n, { smooth: true });
+        edit(() => (find(c.id).total = n));
+      });
+      box.append(picks);
+      row.wheels.push({ w: picks, read: (x) => x.total });
     } else if (mode === 'credits') {
       add(
         'Credits',
@@ -1094,12 +1097,19 @@ $('#review-list').addEventListener('click', (e) => {
     rows: 5,
     onChange: (n) => {
       t.value = n;
+      picks.set(n);
       paintTotal(li, i);
     },
   });
+  const picks = creditPicks(t.value ?? t.est, (n) => {
+    w.set(n, { smooth: true });
+    t.value = n;
+    paintTotal(li, i);
+  });
   const side = document.createElement('div');
   side.className = 'review__wheel-side';
-  side.innerHTML = '<b>Classes this semester</b><span>All types together. A course that has finished has as many as it held.</span>';
+  side.innerHTML = '<b>Classes this semester</b><span>All types together, 15 for each credit. A course that has finished has as many as it held.</span>';
+  side.append(picks);
   if (t.est) {
     const reset = document.createElement('button');
     reset.type = 'button';
@@ -1147,6 +1157,34 @@ function estimateTotal(c, report) {
   const term = { start: report.start || '', end: assumedEnd(report.start), asOf: report.asOf || '' };
   const plan = classesLeft({ parts, plan: 'pace' }, term);
   return plan.total == null ? null : plan.total + sumParts(parts).conducted;
+}
+
+/** Quick picks for a course's total: whole credits, 15 classes each. set(n) marks the one that matches. */
+function creditPicks(current, pick) {
+  const box = document.createElement('div');
+  box.className = 'credit-picks';
+  box.setAttribute('role', 'group');
+  box.setAttribute('aria-label', 'Classes by credits');
+  for (const cr of [1, 2, 3, 4]) {
+    const n = cr * TERM_WEEKS;
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'chip credit-pick';
+    b.dataset.n = n;
+    b.innerHTML = '<b class="num"></b><span></span>';
+    b.firstChild.textContent = n;
+    b.lastChild.textContent = `${cr} credit${cr > 1 ? 's' : ''}`;
+    b.addEventListener('click', () => {
+      box.set(n);
+      pick(n);
+    });
+    box.append(b);
+  }
+  box.set = (v) => {
+    for (const b of box.children) b.setAttribute('aria-pressed', String(Number(b.dataset.n) === v));
+  };
+  box.set(current);
+  return box;
 }
 
 function check(name, label, checked) {

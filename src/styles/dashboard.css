@@ -1255,6 +1255,29 @@ html:has(.dashboard),
   margin-top: 4px;
 }
 
+/* Quick picks for a course's total: whole credits of 15 classes each. */
+.credit-picks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.credit-pick {
+  height: 32px;
+  padding: 0 12px;
+  font-size: 13px;
+}
+
+.credit-pick b {
+  font-weight: 500;
+  color: inherit;
+}
+
+.credit-pick span {
+  opacity: 0.62;
+}
+
 /* The minimum, chosen on a wheel before importing. */
 .review__min {
   display: flex;
