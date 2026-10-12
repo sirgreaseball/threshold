@@ -74,6 +74,8 @@ const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 function nowText(v) {
   const kind = v.mode === 'separate' && v.worstKind ? `${v.worstKind} ` : '';
   if (v.status === 'empty') return { text: 'No classes yet', tone: 'muted' };
+  // A course with nothing left to hold is finished, whatever the margin was.
+  if (v.plan.total === 0) return v.status === 'below' ? { text: `Finished below ${v.min}%`, tone: 'danger' } : { text: 'Finished', tone: 'muted' };
   if (v.status === 'below') return { text: `${kind}below ${v.min}% right now`, tone: 'danger' };
   if (v.status === 'edge') return { text: `${kind}no classes to spare right now`, tone: 'edge' };
   return { text: '', tone: '' };

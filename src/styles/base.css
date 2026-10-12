@@ -592,7 +592,6 @@ input:focus-visible + .chip {
   margin: 0;
   padding: calc(var(--wheel-item) * (var(--rows, 5) - 1) / 2) 0;
   list-style: none;
-  perspective: 520px;
 }
 
 .wheel__item {
@@ -607,7 +606,6 @@ input:focus-visible + .chip {
   letter-spacing: -0.02em;
   white-space: nowrap;
   color: var(--muted);
-  transform-origin: 50% 50% -24px;
   transition: color 0.2s;
   cursor: pointer;
 }

@@ -76,8 +76,9 @@ export function wheel({ values, value, format = String, label, rows = 5, onChang
     for (let i = from; i <= to; i++) {
       const d = i - center;
       const s = items[i].style;
-      s.transform = `rotateX(${Math.max(-75, Math.min(75, -d * 20))}deg)`;
-      s.opacity = String(Math.max(0.12, 1 - Math.abs(d) * 0.32));
+      // Each row has its own perspective, centred on itself, so the tilt reads the same anywhere in the list.
+      s.transform = `perspective(240px) rotateX(${Math.max(-60, Math.min(60, -d * 16))}deg)`;
+      s.opacity = String(Math.max(0.15, 1 - Math.abs(d) * 0.3));
     }
     const on = Math.max(0, Math.min(items.length - 1, Math.round(center)));
     if (on !== lit) {
