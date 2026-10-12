@@ -107,7 +107,37 @@ function writeCopy() {
 /* The readout's track: one mark per class in the story, in the order it is told
    (the misses, then the run of attended classes), with a two-item key below. */
 let ticks = [];
+// The ledger: the example course's whole semester, one square per class, in the
+// water beside the story. The classes before the story are already marked (its
+// misses spread through them); the story's own classes fill in as it scrolls.
+// It has two layers, dry and wet (invertText), so every mark is built twice.
+let ledger = [];
+function buildLedger() {
+  const grids = $$('.ledger__grid');
+  if (!grids.length) return;
+  const missed = S.t0 - S.a0;
+  const missAt = new Set(Array.from({ length: missed }, (_, k) => Math.floor(((k + 0.5) * S.t0) / missed)));
+  const kinds = [];
+  for (let k = 0; k < S.t0; k++) kinds.push([missAt.has(k) ? 'miss' : 'attend', false]);
+  for (let k = 0; k < S.k1 + S.k2; k++) kinds.push(['miss', true]);
+  for (let k = 0; k < S.n; k++) kinds.push(['attend', true]);
+  const cols = Math.min(40, Math.max(10, Math.ceil(kinds.length / 4)));
+  ledger = Array.from({ length: S.k1 + S.k2 + S.n }, () => []);
+  for (const grid of grids) {
+    grid.style.setProperty('--cols', cols);
+    grid.replaceChildren(
+      ...kinds.map(([kind, story], k) => {
+        const m = document.createElement('i');
+        m.className = `ledger__mark is-${kind}${story ? ' is-story' : ' is-done'}`;
+        if (story) ledger[k - S.t0].push(m);
+        return m;
+      }),
+    );
+  }
+}
+
 function buildTrack() {
+  buildLedger();
   const track = $('#hud-track');
   if (!track) return;
   const groups = [
@@ -177,6 +207,12 @@ function show(i, kick = true) {
     tick.classList.toggle('is-done', k < i);
     tick.classList.toggle('is-now', k === i - 1);
   });
+  ledger.forEach((marks, k) =>
+    marks.forEach((m) => {
+      m.classList.toggle('is-done', k < i);
+      m.classList.toggle('is-now', k === i - 1);
+    }),
+  );
   if (!intro) liquid.setLevel(percent(a, t), { kick });
 }
 
@@ -199,8 +235,10 @@ function fromProgress(p) {
   let seg = 0;
   while (seg < anchors.length - 2 && p > anchors[seg + 1]) seg++;
   const span = anchors[seg + 1] - anchors[seg] || 1;
-  // A short hold at each anchor, so the copy and the numbers agree while you read.
-  const u = Math.max(0, Math.min(1, ((p - anchors[seg]) / span - 0.12) / 0.76));
+  // A hold at each anchor, so the copy and the numbers agree while you read: the
+  // copy holds on screen for most of its beat (holdBeats), so the numbers wait with
+  // it and move while it hands over to the next.
+  const u = Math.max(0, Math.min(1, ((p - anchors[seg]) / span - 0.45) / 0.5));
   return Math.round(keys[seg] + smooth(u) * (keys[seg + 1] - keys[seg]));
 }
 
@@ -258,11 +296,52 @@ if (!reduce) {
       ease: 'none',
       scrollTrigger: { trigger: '.beat--hero', start: 'top top', end: 'bottom top', scrub: true },
     });
+    holdBeats();
   });
 }
+// Each beat's copy comes to rest, holds there while the water tells its part, and
+// dissolves as the next one rises, so the page is never left empty. The last holds
+// until the next section slides over it. The numbers wait with it (fromProgress).
+function holdBeats() {
+  const beats = $$('.beat:not(.beat--hero)');
+  beats.forEach((beat, k) => {
+    const copy = $('.beat__copy', beat);
+    const last = k === beats.length - 1;
+    const hold = () => innerHeight * (last ? 1.05 : 0.8);
+    gsap.fromTo(
+      copy,
+      { y: 0 },
+      {
+        y: () => hold(),
+        ease: 'none',
+        immediateRender: false,
+        scrollTrigger: { trigger: beat, start: 'top top', end: () => `top -${hold()}`, scrub: true, invalidateOnRefresh: true },
+      },
+    );
+    if (last) return;
+    gsap.fromTo(
+      copy,
+      { autoAlpha: 1 },
+      {
+        autoAlpha: 0,
+        ease: 'none',
+        immediateRender: false,
+        scrollTrigger: { trigger: beat, start: () => `top -${hold() * 0.55}`, end: () => `top -${hold()}`, scrub: true, invalidateOnRefresh: true },
+      },
+    );
+  });
+}
+
+// Below 1024px the ledger runs along the bottom, where the hero's buttons are, so it
+// arrives with the first beat.
+mm.add('(max-width: 1023px)', () => {
+  gsap.fromTo('.ledger', { autoAlpha: 0 }, { autoAlpha: 1, ease: 'none', scrollTrigger: { trigger: '.beat--a', start: 'top 75%', end: 'top 35%', scrub: true } });
+});
+
 // On phones the HUD sits top right, in the way of everything scrolling out. So the
-// hero and each beat's copy hold still at their anchor and dissolve there instead
-// of sliding up under it. Holding still is not motion, so reduced motion gets it too.
+// hero holds still at its anchor and dissolves there instead of sliding up under it,
+// and the beats hold as everywhere else. Holding still is not motion, so reduced
+// motion gets it too.
 mm.add('(max-width: 767px)', () => {
   const hold = (targets, trigger, f) =>
     gsap.fromTo(
@@ -277,7 +356,7 @@ mm.add('(max-width: 767px)', () => {
       },
     );
   hold('.hero__title, .hero__below', '.beat--hero', 0.4);
-  $$('.beat:not(.beat--hero) .beat__copy').forEach((copy) => hold(copy, copy.closest('.beat'), 0.3));
+  holdBeats();
 });
 
 /* ---------- The minimum picker ---------- */

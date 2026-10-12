@@ -129,6 +129,147 @@
   pointer-events: auto;
 }
 
+/* The ledger: the example course's semester, one square per class, in the
+   water on the right. Dry and wet layers (invertText) give it the right colours
+   on either side of the surface as the level moves. */
+.landing {
+  --ledger-w: min(36vw, 700px);
+}
+
+.ledger {
+  display: none;
+  position: absolute;
+  right: var(--gutter);
+  top: calc(var(--line-y) + clamp(30px, 4.6vh, 56px));
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* Shown wherever there is room: beside the story from 1024px, along the bottom
+   below that on a tall enough screen. Where it shows, the readout's own little
+   track gives way to it. */
+@media (min-width: 1024px) and (min-height: 640px), (max-width: 1023px) and (min-height: 740px) {
+  .ledger {
+    display: block;
+  }
+
+  .hud .hud__track {
+    display: none;
+  }
+}
+
+@media (max-width: 1023px) {
+  .landing {
+    --ledger-w: calc(100vw - 2 * var(--gutter));
+  }
+
+  .ledger {
+    top: auto;
+    left: var(--gutter);
+    bottom: calc(clamp(18px, 3vh, 32px) + env(safe-area-inset-bottom, 0px));
+  }
+
+  .ledger .ledger__grid {
+    --mark: min(30px, calc(var(--ledger-w) / (1.2 * var(--cols, 14) - 0.2)));
+    justify-content: start;
+  }
+
+  .ledger .ledger__key {
+    justify-content: flex-start;
+    margin-top: 12px;
+    font-size: 12px;
+  }
+}
+
+.ledger__grid {
+  --mark: min(46px, calc(var(--ledger-w) / (1.2 * var(--cols, 14) - 0.2)));
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 14), var(--mark));
+  gap: calc(var(--mark) * 0.2);
+  justify-content: end;
+}
+
+.ledger__mark {
+  display: block;
+  width: var(--mark);
+  height: var(--mark);
+  border-radius: calc(var(--mark) * 0.24);
+  box-shadow: inset 0 0 0 1.5px var(--hair);
+  transition: background-color 0.4s var(--ease-out), box-shadow 0.4s var(--ease-out), transform 0.6s var(--ease-out), opacity 0.4s;
+}
+
+.ledger__mark.is-done.is-attend {
+  background: var(--ink);
+  box-shadow: none;
+}
+
+.ledger__mark.is-done.is-miss {
+  box-shadow: inset 0 0 0 2px var(--muted);
+}
+
+.ledger__mark.is-story.is-done.is-miss {
+  box-shadow: inset 0 0 0 2px var(--danger);
+}
+
+.ledger__mark.is-now {
+  transform: scale(1.14);
+}
+
+.ledger .invert-b .ledger__mark {
+  box-shadow: inset 0 0 0 1.5px rgb(244 244 242 / 0.22);
+}
+
+.ledger .invert-b .ledger__mark.is-done.is-attend {
+  background: var(--on-accent);
+  box-shadow: none;
+}
+
+.ledger .invert-b .ledger__mark.is-done.is-miss {
+  box-shadow: inset 0 0 0 2px rgb(244 244 242 / 0.62);
+}
+
+.ledger .invert-b .ledger__mark.is-story.is-done.is-miss {
+  box-shadow: inset 0 0 0 2px #ffb4a2;
+}
+
+.ledger__key {
+  display: flex;
+  justify-content: flex-end;
+  gap: 18px;
+  margin-top: 16px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.ledger .invert-b .ledger__key {
+  color: rgb(244 244 242 / 0.78);
+}
+
+.ledger__key span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.ledger__key i {
+  width: 11px;
+  height: 11px;
+  border-radius: 3px;
+}
+
+.ledger__key .is-attend {
+  background: currentColor;
+}
+
+.ledger__key .is-miss {
+  box-shadow: inset 0 0 0 1.5px currentColor;
+}
+
+.ledger__key .is-future {
+  box-shadow: inset 0 0 0 1px currentColor;
+  opacity: 0.45;
+}
+
 .hud {
   position: absolute;
   top: calc(92px + env(safe-area-inset-top, 0px));
@@ -426,29 +567,42 @@
   display: grid;
   gap: 20px;
   max-width: 620px;
-  margin-left: var(--shift, 0px);
 }
 
-.beat--b .beat__copy {
-  --shift: 12vw;
-}
-
-.beat--c .beat__copy {
-  --shift: 24vw;
-}
-
-/* The HUD is 240px wide on the right. Copy stops 40px short of it, so text never
-   scrolls underneath. Phones hold and dissolve the copy instead (landing.js). */
+/* From 768px each beat is laid out like the hero: the headline comes to rest
+   just above the line and the words below it sit in the water. The copy then
+   holds there (landing.js), so it never scrolls under the readout. */
 @media (min-width: 768px) {
+  .beat {
+    padding-top: 0;
+  }
+
   .beat__copy {
-    max-width: min(620px, calc(100vw - 2 * var(--gutter) - 280px - var(--shift, 0px)));
+    grid-template-rows: var(--line-y) auto;
+    gap: 0;
+    max-width: min(620px, calc(100vw - 2 * var(--gutter) - 280px));
+  }
+
+  .beat h2 {
+    align-self: end;
+    padding-bottom: clamp(18px, 2.6vh, 32px);
+  }
+
+  /* Margin, not padding: the wet copy of the text covers the padding box, so
+     padding would shift it out of line with the dry one. */
+  .beat p {
+    margin-top: clamp(22px, 3.4vh, 40px);
   }
 }
 
-@media (max-width: 1023px) {
-  .beat--b .beat__copy,
-  .beat--c .beat__copy {
-    --shift: 0px;
+/* With the ledger beside them, the hero's words and the beats stop short of it. */
+@media (min-width: 1024px) and (min-height: 640px) {
+  .beat__copy {
+    max-width: min(620px, calc(100vw - 2 * var(--gutter) - var(--ledger-w) - 56px));
+  }
+
+  .hero__below {
+    max-width: min(560px, calc(100vw - 2 * var(--gutter) - var(--ledger-w) - 56px));
   }
 }
 
@@ -508,6 +662,30 @@
   list-style: none;
   margin: 0;
   padding: 0;
+}
+
+@media (min-width: 1024px) {
+  .qs {
+    display: grid;
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+    column-gap: clamp(40px, 6vw, 112px);
+    align-items: end;
+  }
+
+  .qs__title {
+    margin-bottom: clamp(48px, 8vh, 96px);
+  }
+
+  .qs__lede {
+    justify-self: end;
+    max-width: 36ch;
+    margin: 0 0 clamp(52px, 8.4vh, 100px);
+    font-size: clamp(17px, 1.35vw, 21px);
+  }
+
+  .qs__list {
+    grid-column: 1 / -1;
+  }
 }
 
 .q {
