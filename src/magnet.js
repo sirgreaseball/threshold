@@ -8,6 +8,11 @@
 
 import gsap from 'gsap';
 
+// GSAP writes its version onto window when its clock first starts. Start the
+// clock now and take the note back: nothing reads it, and it names the library.
+gsap.ticker.wake();
+delete window.gsapVersions;
+
 const fine = matchMedia('(hover: hover) and (pointer: fine)');
 const reduce = matchMedia('(prefers-reduced-motion: reduce)');
 

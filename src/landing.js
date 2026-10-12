@@ -32,6 +32,9 @@ let lenis = null;
 gsap.ticker.lagSmoothing(0);
 if (!reduce) {
   lenis = new Lenis({ lerp: 0.085, wheelMultiplier: 0.9 });
+  // Lenis leaves its name and version on window; nothing reads them back.
+  delete window.lenis;
+  delete window.lenisVersion;
   lenis.on('scroll', ScrollTrigger.update);
   gsap.ticker.add((t) => lenis.raf(t * 1000));
 }
