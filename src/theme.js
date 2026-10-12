@@ -4,31 +4,35 @@
 // new page is live underneath, and a wobbling clip-path reveals it.
 
 import { icon } from './icons.js';
+import { getSetting, setSetting } from './settings.js';
 
-const KEY = 'threshold.theme';
+const OLD_KEY = 'threshold.theme';
 const root = document.documentElement;
 const system = matchMedia('(prefers-color-scheme: dark)');
 const reduce = matchMedia('(prefers-reduced-motion: reduce)');
 
 export const currentTheme = () => (root.dataset.theme === 'dark' ? 'dark' : 'light');
 
+// The choice lives in a cookie. Versions before 2.3 kept it in localStorage: move it over once.
 function stored() {
+  const t = getSetting('theme');
+  if (t) return t;
   try {
-    return localStorage.getItem(KEY);
+    const old = localStorage.getItem(OLD_KEY);
+    localStorage.removeItem(OLD_KEY);
+    if (old === 'dark' || old === 'light') {
+      setSetting('theme', old);
+      return old;
+    }
   } catch {
-    return null;
+    // Storage blocked: nothing to move.
   }
+  return null;
 }
 
 function apply(next, remember) {
   root.dataset.theme = next;
-  if (remember) {
-    try {
-      localStorage.setItem(KEY, next);
-    } catch {
-      // The toggle still works for this visit.
-    }
-  }
+  if (remember) setSetting('theme', next);
   // Match the browser chrome (status bar, tab strip) to the page.
   const paper = getComputedStyle(root).getPropertyValue('--paper').trim();
   document.querySelectorAll('meta[name="theme-color"]').forEach((m) => m.setAttribute('content', paper));

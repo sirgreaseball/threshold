@@ -12,13 +12,7 @@
     <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32" />
     <link rel="apple-touch-icon" href="/icon-180.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
-    <script>
-      (function () {
-        var t = null;
-        try { t = localStorage.getItem('threshold.theme'); } catch (e) {}
-        document.documentElement.dataset.theme = t || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-      })();
-    </script>
+    <script src="/t.js"></script>
     <script type="module" src="/src/dashboard.js"></script>
   </head>
   <body class="dashboard">
@@ -167,11 +161,10 @@
         <fieldset class="rule__group">
           <legend>Minimum attendance</legend>
           <div class="rule__chips" id="rule-chips"></div>
-          <label class="rule__other">
-            <span>Other</span>
-            <input type="number" inputmode="numeric" min="1" max="100" id="rule-other" class="num" aria-label="Other minimum, in percent" />
-            <span>%</span>
-          </label>
+          <div class="rule__other">
+            <span>Or scroll to any minimum</span>
+            <div id="rule-wheel"></div>
+          </div>
         </fieldset>
         <fieldset class="rule__group">
           <legend>How it is counted</legend>
@@ -183,11 +176,10 @@
             <input type="radio" name="rule-mode" value="separate" />
             <span class="option__body"><b>Each type on its own</b><span>Theory, practical and tutorial must each clear the minimum.</span></span>
           </label>
-          <label class="rule__lab" id="rule-lab-wrap">
+          <div class="rule__lab" id="rule-lab-wrap">
             <span>Practical and studio minimum</span>
-            <input type="number" inputmode="numeric" min="1" max="100" id="rule-lab" class="num" placeholder="Same" aria-label="Practical and studio minimum, in percent" />
-            <span>%</span>
-          </label>
+            <div id="rule-lab-wheel"></div>
+          </div>
         </fieldset>
         <p class="rule__note">Every course can also have its own minimum, in its details.</p>
       </div>
@@ -235,8 +227,8 @@
                   <p class="plan__forecast"></p>
                 </div>
                 <div class="drawer__row">
-                  <label class="field-label" data-for="min">Minimum for this course</label>
-                  <select class="drawer__min num" data-field="min"></select>
+                  <p class="field-label">Minimum for this course</p>
+                  <div class="drawer__min"></div>
                 </div>
                 <button type="button" class="btn btn--ghost btn--sm drawer__delete" data-act="delete"><i data-icon="trash"></i> Remove course</button>
               </div>

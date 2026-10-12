@@ -6,6 +6,8 @@ import { Skyline } from './skyline.js';
 import { evaluate, classesLeft, shortName, KINDS, TERM_WEEKS, parseDate, isoDate, daysBetween, startOfDay, weeklyFromCredits, sumParts, slack } from './plan.js';
 import { percent } from './core.js';
 import { blank, sample, uid, cleanState, cleanCourse, takePending, forgetSaved } from './store.js';
+import { savedRule, saveRule } from './settings.js';
+import { wheel, range } from './wheel.js';
 import { readReportFiles, readReportText, ReportError } from './report.js';
 import { fillIcons } from './icons.js';
 import { bindThemeToggle } from './theme.js';
@@ -20,10 +22,10 @@ fillIcons(document);
 bindThemeToggle($('#theme-btn'));
 magnetize();
 
-// Held in memory only: nothing is saved, and a reload starts empty. The landing
-// page passes its minimum along in the address (?min=80).
+// Courses are held in memory only, and a reload starts empty. The college's rule
+// is a setting, remembered in a cookie (settings.js) and shared with the landing page.
 forgetSaved();
-let state = cleanState({ ...blank(), rule: { min: Number(new URLSearchParams(location.search).get('min')) } });
+let state = cleanState({ ...blank(), rule: savedRule() });
 let views = new Map();
 const rows = new Map(); // course id -> { el, parts: Map(part id -> el), shownPct }
 
@@ -413,10 +415,7 @@ function makeRow(c) {
   const name = $('.drawer__name', el);
   name.id = `name-${c.id}`;
   $('[data-for="name"]', el).setAttribute('for', name.id);
-  const min = $('.drawer__min', el);
-  min.id = `min-${c.id}`;
-  $('[data-for="min"]', el).setAttribute('for', min.id);
-  const row = { el, parts: new Map(), shownPct: null, mode: null };
+  const row = { el, parts: new Map(), shownPct: null, mode: null, wheels: [], minWheel: null };
   rows.set(c.id, row);
   els.list.append(el);
   return row;
@@ -464,7 +463,7 @@ function paintRow(c, v, animate) {
   if (document.activeElement !== name) name.value = c.name;
   paintParts(row, c, v);
   paintPlan(row, c, v);
-  paintMin(el, c);
+  paintMin(row, c);
 }
 
 function paintParts(row, c, v) {
@@ -540,20 +539,53 @@ function paintPlan(row, c, v) {
   if (box.dataset.sig !== sig) {
     box.dataset.sig = sig;
     box.replaceChildren();
+    row.wheels = [];
+    const add = (label, w, read) => {
+      const wrap = document.createElement('div');
+      wrap.className = 'plan__field';
+      const span = document.createElement('span');
+      span.textContent = label;
+      wrap.append(span, w.el);
+      box.append(wrap);
+      row.wheels.push({ w, read });
+    };
+    const edit = (change) => {
+      commit(change);
+      paintAll();
+    };
     if (mode === 'total') {
-      box.append(field('Classes this semester', 'total', c.total ?? '', { placeholder: '60' }));
+      add(
+        'Classes this semester',
+        wheel({ values: range(1, 300), value: c.total, label: `${c.name}: classes this semester`, rows: 3, onChange: (n) => edit(() => (find(c.id).total = n)) }),
+        (x) => x.total,
+      );
     } else if (mode === 'credits') {
-      box.append(field('Credits', 'credits', c.credits ?? '', { step: '0.5', placeholder: '4' }));
+      add(
+        'Credits',
+        wheel({ values: range(0.5, 12, 0.5), value: c.credits, label: `${c.name}: credits`, rows: 3, onChange: (n) => edit(() => (find(c.id).credits = n)) }),
+        (x) => x.credits,
+      );
     } else if (mode === 'weekly') {
-      c.parts.forEach((p) => box.append(field(`${p.kind} a week`, 'perWeek', p.perWeek || '', { step: '0.5', part: p.id, placeholder: '2' })));
+      c.parts.forEach((p) =>
+        add(
+          `${p.kind} a week`,
+          wheel({
+            values: range(0, 14, 0.5),
+            value: p.perWeek || 0,
+            label: `${c.name}: ${p.kind.toLowerCase()} classes a week`,
+            rows: 3,
+            onChange: (n) =>
+              edit(() => {
+                const q = find(c.id).parts.find((x) => x.id === p.id);
+                if (q) q.perWeek = n;
+              }),
+          }),
+          (x) => x.parts.find((q) => q.id === p.id)?.perWeek || 0,
+        ),
+      );
     }
   } else {
-    for (const input of $$('input', box)) {
-      if (document.activeElement === input) continue;
-      const p = input.dataset.part && c.parts.find((x) => x.id === input.dataset.part);
-      const f = input.dataset.field;
-      input.value = (f === 'credits' ? c.credits : f === 'total' ? c.total : p ? p.perWeek || '' : '') ?? '';
-    }
+    for (const { w, read } of row.wheels) w.set(read(c));
   }
   const note = planNote(c, v);
   const forecast = forecastText(c, v);
@@ -562,31 +594,27 @@ function paintPlan(row, c, v) {
   fc.dataset.tone = v.end && !v.end.reachable ? 'danger' : '';
 }
 
-function field(label, name, value, { step = '1', part = '', placeholder = '' } = {}) {
-  const wrap = document.createElement('label');
-  wrap.className = 'plan__field';
-  wrap.innerHTML = `<span></span><input type="number" class="num" min="0" max="${name === 'credits' ? 30 : 1000}" inputmode="decimal" />`;
-  wrap.firstChild.textContent = label;
-  const input = wrap.lastChild;
-  input.step = step;
-  input.value = value;
-  input.placeholder = placeholder;
-  input.dataset.field = name;
-  if (part) input.dataset.part = part;
-  return wrap;
-}
-
-function paintMin(el, c) {
-  const sel = $('.drawer__min', el);
-  const opts = [''];
-  for (let p = 50; p <= 100; p += 5) opts.push(String(p));
-  if (c.min && !opts.includes(String(c.min))) opts.push(String(c.min));
-  const sig = `${state.rule.min}|${opts.join()}`;
-  if (sel.dataset.sig !== sig) {
-    sel.dataset.sig = sig;
-    sel.replaceChildren(...opts.map((o) => new Option(o ? `${o}%` : `Same as the college (${state.rule.min}%)`, o)));
+/** A course's own minimum, on a wheel whose first stop is the college's. */
+function paintMin(row, c) {
+  const box = $('.drawer__min', row.el);
+  const sig = String(state.rule.min);
+  if (box.dataset.sig === sig && row.minWheel) {
+    row.minWheel.set(c.min);
+    return;
   }
-  sel.value = c.min ? String(c.min) : '';
+  box.dataset.sig = sig;
+  row.minWheel = wheel({
+    values: [null, ...range(40, 100)],
+    value: c.min,
+    format: (n) => (n == null ? `College, ${state.rule.min}%` : `${n}%`),
+    label: `${c.name}: minimum attendance`,
+    rows: 3,
+    onChange: (n) => {
+      commit(() => (find(c.id).min = n));
+      paintAll();
+    },
+  });
+  box.replaceChildren(row.minWheel.el);
 }
 
 function paintRows(intro) {
@@ -597,7 +625,11 @@ function paintRows(intro) {
     }
   }
   state.courses.forEach((c) => paintRow(c, views.get(c.id), !intro));
-  state.courses.forEach((c) => els.list.append(rows.get(c.id).el));
+  // Move a row only when the order changed: moving a node resets the scroll of the wheels inside it, and drops focus.
+  state.courses.forEach((c, i) => {
+    const el = rows.get(c.id).el;
+    if (els.list.children[i] !== el) els.list.insertBefore(el, els.list.children[i] || null);
+  });
   if (intro && !reduce) {
     gsap.fromTo($$('.row', els.list), { y: 18, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.9, ease: 'expo.out', stagger: 0.05, clearProps: 'transform,opacity,visibility' });
   }
@@ -636,6 +668,7 @@ function commit(change, message) {
   const before = structuredClone(state);
   change();
   state = cleanState(state);
+  saveRule(state.rule);
   if (message) {
     undoSnap = before;
     showToast(message);
@@ -735,18 +768,15 @@ els.list.addEventListener('change', (e) => {
   } else if (t.dataset.field === 'name') {
     const name = t.value.trim().slice(0, 60);
     if (name) commit(() => (find(c.id).name = name));
-  } else if (t.dataset.field === 'min') {
-    commit(() => (find(c.id).min = t.value ? Number(t.value) : null));
   } else if (t.name === `plan-${c.id}`) {
-    commit(() => (find(c.id).plan = t.value));
-  } else if (t.dataset.field === 'credits') {
-    commit(() => (find(c.id).credits = Number(t.value) > 0 ? Number(t.value) : null));
-  } else if (t.dataset.field === 'total') {
-    commit(() => (find(c.id).total = Number(t.value) > 0 ? Math.round(Number(t.value)) : null));
-  } else if (t.dataset.field === 'perWeek') {
+    // A wheel always shows a real value, so a way of counting starts from one:
+    // the total from the current estimate (or the classes held), credits from 3.
     commit(() => {
-      const q = find(c.id).parts.find((x) => x.id === t.dataset.part);
-      q.perWeek = t.value === '' ? 0 : Math.max(0, Number(t.value) || 0);
+      const q = find(c.id);
+      q.plan = t.value;
+      const held = sumParts(q.parts).conducted;
+      if (t.value === 'total' && !q.total) q.total = Math.max(1, held, views.get(c.id)?.end?.total ?? 0);
+      if (t.value === 'credits' && !q.credits) q.credits = 3;
     });
   } else return;
   paintAll();
@@ -843,15 +873,32 @@ ruleChips.append(
   }),
 );
 
+const ruleWheel = wheel({
+  values: range(40, 100),
+  value: state.rule.min,
+  format: (n) => `${n}%`,
+  label: 'Minimum attendance',
+  rows: 3,
+  onChange: (n) => setRule(() => (state.rule.min = n)),
+});
+$('#rule-wheel').replaceWith(ruleWheel.el);
+const labWheel = wheel({
+  values: [null, ...range(40, 100)],
+  value: state.rule.labMin,
+  format: (n) => (n == null ? 'Same' : `${n}%`),
+  label: 'Practical and studio minimum',
+  rows: 3,
+  onChange: (n) => setRule(() => (state.rule.labMin = n)),
+});
+$('#rule-lab-wheel').replaceWith(labWheel.el);
+
 function paintRuleDialog() {
   const { min, mode, labMin } = state.rule;
   $$('.chip', ruleChips).forEach((b) => b.setAttribute('aria-pressed', String(Number(b.dataset.min) === min)));
-  const other = $('#rule-other');
-  if (document.activeElement !== other) other.value = PRESETS.includes(min) ? '' : min;
+  ruleWheel.set(min);
   $$('input[name="rule-mode"]').forEach((r) => (r.checked = r.value === mode));
   $('#rule-lab-wrap').hidden = mode !== 'separate';
-  const lab = $('#rule-lab');
-  if (document.activeElement !== lab) lab.value = labMin ?? '';
+  labWheel.set(labMin);
 }
 
 function setRule(change) {
@@ -864,16 +911,7 @@ ruleChips.addEventListener('click', (e) => {
   const b = e.target.closest('[data-min]');
   if (b) setRule(() => (state.rule.min = Number(b.dataset.min)));
 });
-$('#rule-other').addEventListener('change', (e) => {
-  const n = Math.round(Number(e.target.value));
-  if (n >= 1 && n <= 100) setRule(() => (state.rule.min = n));
-  else paintRuleDialog();
-});
 $$('input[name="rule-mode"]').forEach((r) => r.addEventListener('change', () => setRule(() => (state.rule.mode = r.value))));
-$('#rule-lab').addEventListener('change', (e) => {
-  const n = Math.round(Number(e.target.value));
-  setRule(() => (state.rule.labMin = n >= 1 && n <= 100 ? n : null));
-});
 $('#rule-btn').addEventListener('click', () => {
   paintRuleDialog();
   openSheet(els.ruleDlg);
@@ -935,6 +973,7 @@ $('#paste-go').addEventListener('click', () => {
 
 function review(report) {
   pending = report;
+  reviewTotals.clear();
   const n = report.courses.length;
   // c.check: whether a course adds up to the percentage printed on the report (table.js).
   const printed = report.courses.filter((c) => c.check);
@@ -951,14 +990,16 @@ function review(report) {
   $('#review-lede').textContent = lede;
   const facts = $('#review-facts');
   facts.replaceChildren(...reportNotes(report));
-  if (report.rule) {
-    facts.append(check('use-rule', `Use the report's minimum: ${report.rule}% in each course`, true));
-  } else {
-    const p = document.createElement('p');
-    p.className = 'review__note';
-    p.textContent = `The report does not say the minimum, so the dashboard keeps ${state.rule.min}%. Change it at the top if your college's is different.`;
-    facts.append(p);
-  }
+  // The minimum: the report's if it states one, otherwise the one this device remembers.
+  reviewMin = wheel({ values: range(40, 100), value: report.rule ?? state.rule.min, format: (n) => `${n}%`, label: 'Minimum attendance', rows: 3 });
+  const min = document.createElement('div');
+  min.className = 'review__min';
+  min.innerHTML = '<div><b>Minimum attendance</b><span></span></div>';
+  min.querySelector('span').textContent = report.rule
+    ? `The report says ${report.rule}%. Scroll if yours is different.`
+    : 'The report does not say. Scroll to your college\'s minimum; it is remembered on this device.';
+  min.append(reviewMin.el);
+  facts.append(min);
   if (report.start || report.asOf) {
     const bits = [report.start && `classes began ${niceDate(report.start)}`, report.asOf && `counts as of ${niceDate(report.asOf)}`].filter(Boolean);
     facts.append(check('use-dates', `Use ${many ? 'their' : 'its'} dates: ${bits.join(', ')}`, true));
@@ -979,16 +1020,14 @@ function review(report) {
       const li = document.createElement('li');
       li.className = 'review__item';
       const { attended, conducted } = sumParts(c.parts);
-      li.innerHTML = `<input type="checkbox" checked data-i="${i}" /><textarea class="review__name" data-i="${i}" maxlength="60" rows="1" spellcheck="false"></textarea><span class="review__parts"></span><span class="review__pct num"></span><label class="review__total"><input type="number" class="num" min="1" max="1000" inputmode="numeric" /><span>classes</span></label>`;
+      li.innerHTML = `<input type="checkbox" checked data-i="${i}" /><textarea class="review__name" data-i="${i}" maxlength="60" rows="1" spellcheck="false"></textarea><span class="review__parts"></span><span class="review__pct num"></span><button type="button" class="review__total" aria-expanded="false"><span class="num"></span><i data-icon="caret"></i></button><div class="review__wheel" hidden></div>`;
       li.children[0].setAttribute('aria-label', `Import ${c.name}`);
       li.children[1].value = c.name;
       li.children[1].setAttribute('aria-label', 'Course name');
       li.children[2].textContent = c.parts.map((p) => `${p.kind} ${p.attended}/${p.conducted}`).join(' · ');
-      const total = $('.review__total input', li);
-      total.setAttribute('aria-label', `${c.name}: total classes this semester`);
-      if (c.total) total.value = c.total;
-      const est = estimateTotal(c, report);
-      total.placeholder = est ? `~${est}` : 'Total';
+      reviewTotals.set(i, { value: c.total ?? null, est: estimateTotal(c, report), held: conducted, name: c.name });
+      fillIcons(li);
+      paintTotal(li, i);
       const pct = li.children[3];
       pct.textContent = fmt(percent(attended, conducted));
       if (c.check) {
@@ -1005,6 +1044,74 @@ function review(report) {
   $$('.review__name', list).forEach(fitName);
   if (!reduce) gsap.from($$('.review__item', list), { y: 10, opacity: 0, duration: 0.6, ease: 'expo.out', stagger: 0.03 });
 }
+
+/* Each course's total classes this semester: a pill showing it (or the estimate,
+   with a ~), which opens a wheel under the course. One wheel is open at a time. */
+let reviewMin = null;
+const reviewTotals = new Map();
+
+function paintTotal(li, i) {
+  const t = reviewTotals.get(i);
+  const pill = $('.review__total', li);
+  pill.firstElementChild.textContent = t.value ? `${t.value} classes` : t.est ? `~${t.est} classes` : 'Total classes';
+  pill.dataset.set = t.value ? 'yes' : '';
+  pill.setAttribute('aria-label', `${t.name}: ${t.value ? `${t.value} classes this semester` : 'total classes this semester, not set'}. Change it.`);
+}
+
+function closeTotals(except) {
+  for (const li of $$('#review-list .review__item')) {
+    if (li === except) continue;
+    $('.review__wheel', li).hidden = true;
+    $('.review__total', li).setAttribute('aria-expanded', 'false');
+  }
+}
+
+$('#review-list').addEventListener('click', (e) => {
+  const li = e.target.closest('.review__item');
+  if (!li) return;
+  const i = Number(li.children[0].dataset.i);
+  const t = reviewTotals.get(i);
+  if (e.target.closest('.review__use-est')) {
+    t.value = null;
+    paintTotal(li, i);
+    closeTotals();
+    return;
+  }
+  if (!e.target.closest('.review__total')) return;
+  const box = $('.review__wheel', li);
+  const open = box.hidden;
+  closeTotals(li);
+  box.hidden = !open;
+  $('.review__total', li).setAttribute('aria-expanded', String(open));
+  if (!open || box.childElementCount) return;
+  const w = wheel({
+    values: range(1, 300),
+    value: t.value ?? t.est ?? Math.max(1, t.held),
+    format: (n) => `${n}`,
+    label: `${t.name}: classes this semester`,
+    rows: 5,
+    onChange: (n) => {
+      t.value = n;
+      paintTotal(li, i);
+    },
+  });
+  const side = document.createElement('div');
+  side.className = 'review__wheel-side';
+  side.innerHTML = '<b>Classes this semester</b><span>All types together. A course that has finished has as many as it held.</span>';
+  if (t.est) {
+    const reset = document.createElement('button');
+    reset.type = 'button';
+    reset.className = 'link review__use-est';
+    reset.textContent = `Use the estimate, ~${t.est}`;
+    side.append(reset);
+  }
+  box.append(w.el, side);
+  // Opening the wheel picks what it shows, so the pill and the wheel agree.
+  if (t.value == null) {
+    t.value = w.value;
+    paintTotal(li, i);
+  }
+});
 
 /** What the review should say about the files themselves: what was added up, left out or not counted. */
 function reportNotes(report) {
@@ -1078,15 +1185,13 @@ $('#review-go').addEventListener('click', () => {
     .map((li) => {
       const i = Number(li.children[0].dataset.i);
       const name = li.children[1].value.replace(/\s+/g, ' ').trim() || report.courses[i].name;
-      const total = Number($('.review__total input', li).value);
-      return { ...report.courses[i], name, total: total > 0 ? Math.round(total) : null };
+      return { ...report.courses[i], name, total: reviewTotals.get(i)?.value ?? null };
     });
-  const useRule = $('input[name="use-rule"]', els.importDlg)?.checked;
   const useDates = $('input[name="use-dates"]', els.importDlg)?.checked;
   // An import replaces everything the dashboard held, dates included, so
   // nothing from an earlier report carries over; Undo brings it all back.
   commit(() => {
-    if (useRule && report.rule) state.rule.min = report.rule;
+    if (reviewMin) state.rule.min = reviewMin.value;
     const endOn = $('#review-end', els.importDlg)?.value;
     state.term = { start: (useDates && report.start) || '', end: parseDate(endOn) ? endOn : '', asOf: (useDates && report.asOf) || '' };
     state.courses = chosen.map((c) => cleanCourse({ id: uid(), name: c.name, credits: c.credits, total: c.total, parts: c.parts.map((p) => ({ ...p, id: uid() })) }));

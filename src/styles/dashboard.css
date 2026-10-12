@@ -575,8 +575,6 @@ html:has(.dashboard),
 }
 
 .drawer__name:focus,
-.plan__field input:focus,
-.drawer__min:focus,
 .cnt:focus {
   outline: none;
   box-shadow: inset 0 0 0 1.5px var(--accent);
@@ -734,17 +732,8 @@ html:has(.dashboard),
   color: var(--muted);
 }
 
-.plan__field input {
-  width: 84px;
-  height: 38px;
-  padding: 0 12px;
-  border: 0;
-  border-radius: 999px;
-  box-shadow: inset 0 0 0 1px var(--hair);
-  background: transparent;
-  font-size: 15px;
-  color: var(--ink);
-  text-align: center;
+.plan__field .wheel {
+  min-width: 92px;
 }
 
 .plan__forecast {
@@ -765,18 +754,10 @@ html:has(.dashboard),
 
 .drawer__min {
   justify-self: start;
-  height: 38px;
-  padding: 0 34px 0 14px;
-  border: 0;
-  border-radius: 999px;
-  box-shadow: inset 0 0 0 1px var(--hair);
-  background: transparent
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256' fill='%23888'%3E%3Cpath d='M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z'/%3E%3C/svg%3E")
-    no-repeat right 12px center / 14px;
-  font-size: 14px;
-  -webkit-appearance: none;
-  appearance: none;
-  cursor: pointer;
+}
+
+.drawer__min .wheel {
+  min-width: 150px;
 }
 
 .drawer__delete {
@@ -1162,7 +1143,8 @@ html:has(.dashboard),
   grid-template-columns: 18px minmax(0, 1fr) auto;
   grid-template-areas:
     'box name total'
-    '. parts pct';
+    '. parts pct'
+    '. wheel wheel';
   gap: 2px 12px;
   align-items: center;
   padding: 8px 0;
@@ -1211,42 +1193,94 @@ html:has(.dashboard),
   text-align: right;
 }
 
+/* Each course's total classes: a pill that opens a wheel under the course. */
 .review__total {
   grid-area: total;
+  justify-self: end;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 10px 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--hair);
+  font-size: 13px;
+  color: var(--muted);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.25s, color 0.25s;
+}
+
+.review__total[data-set='yes'] {
+  color: var(--ink);
+  background: var(--accent-soft);
+  box-shadow: none;
+}
+
+.review__total svg {
+  width: 12px;
+  height: 12px;
+  transition: transform 0.35s var(--ease-out);
+}
+
+.review__total[aria-expanded='true'] svg {
+  transform: rotate(180deg);
+}
+
+.review__wheel {
+  grid-area: wheel;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: 6px;
-  font-size: 12px;
+  gap: 18px;
+  padding: 10px 0 4px 10px;
+}
+
+.review__wheel-side {
+  display: grid;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--muted);
+  max-width: 30ch;
+}
+
+.review__wheel-side b {
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.review__wheel-side .link {
+  justify-self: start;
+  margin-top: 4px;
+}
+
+/* The minimum, chosen on a wheel before importing. */
+.review__min {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: var(--paper-2);
+}
+
+.review__min > div {
+  display: grid;
+  gap: 2px;
+  font-size: 13px;
   color: var(--muted);
 }
 
-.review__total input {
-  width: 64px;
-  height: 32px;
-  padding: 0 8px;
-  border: 1px solid var(--hair);
-  border-radius: 9px;
-  background: transparent;
-  color: var(--ink);
+.review__min b {
   font-size: 15px;
-  text-align: right;
+  font-weight: 500;
+  color: var(--ink);
 }
 
-.review__total input::-webkit-inner-spin-button,
-.review__total input::-webkit-outer-spin-button {
-  margin: 0;
-  -webkit-appearance: none;
-}
-
-.review__total input {
-  -moz-appearance: textfield;
-}
-
-.review__total input:focus {
-  outline: none;
-  border-color: var(--accent);
-  background: var(--accent-soft);
+.review__min .wheel::before {
+  background: var(--paper);
 }
 
 /* A course that does not add up to the percentage printed on the report. */

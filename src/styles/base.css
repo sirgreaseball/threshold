@@ -544,6 +544,87 @@ input:focus-visible + .chip {
   }
 }
 
+/* Number wheel (wheel.js): a scroll-snap column of values with a band in the
+   middle. The rows tilt and fade away from the band, as on Apple's timer. */
+.wheel {
+  --wheel-item: 36px;
+  position: relative;
+  display: inline-block;
+  min-width: 84px;
+  isolation: isolate;
+}
+
+.wheel::before {
+  content: '';
+  position: absolute;
+  inset: 50% 0 auto;
+  z-index: -1;
+  height: var(--wheel-item);
+  transform: translateY(-50%);
+  border-radius: 11px;
+  background: var(--paper-2);
+  box-shadow: inset 0 0 0 1px var(--hair);
+  transition: box-shadow 0.25s var(--ease-out);
+}
+
+.wheel:has(.wheel__view:focus-visible)::before {
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+}
+
+.wheel__view {
+  height: calc(var(--wheel-item) * var(--rows, 5));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scroll-snap-type: y mandatory;
+  scrollbar-width: none;
+  outline: none;
+  touch-action: pan-y;
+  -webkit-mask-image: linear-gradient(transparent, #000 28%, #000 72%, transparent);
+  mask-image: linear-gradient(transparent, #000 28%, #000 72%, transparent);
+  cursor: grab;
+}
+
+.wheel__view::-webkit-scrollbar {
+  display: none;
+}
+
+.wheel__list {
+  margin: 0;
+  padding: calc(var(--wheel-item) * (var(--rows, 5) - 1) / 2) 0;
+  list-style: none;
+  perspective: 520px;
+}
+
+.wheel__item {
+  display: grid;
+  place-items: center;
+  height: var(--wheel-item);
+  padding: 0 16px;
+  scroll-snap-align: center;
+  font-size: 19px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  color: var(--muted);
+  transform-origin: 50% 50% -24px;
+  transition: color 0.2s;
+  cursor: pointer;
+}
+
+.wheel__item.is-on {
+  color: var(--ink);
+}
+
+.wheel--sm {
+  --wheel-item: 30px;
+  min-width: 72px;
+}
+
+.wheel--sm .wheel__item {
+  font-size: 16px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

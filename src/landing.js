@@ -11,6 +11,7 @@ import { Liquid, invertText } from './liquid.js';
 import { percent, canMiss, mustAttend, status, forecast } from './core.js';
 import { story, timeline, word, Word } from './story.js';
 import { setPending } from './store.js';
+import { getSetting, setSetting } from './settings.js';
 import { readReportFiles, ReportError } from './report.js';
 import { fillIcons } from './icons.js';
 import { bindThemeToggle } from './theme.js';
@@ -79,9 +80,8 @@ function setStory(key, text) {
 
 /* ---------- The minimum, passed on to the dashboard ---------- */
 const clampP = (n) => Math.max(50, Math.min(95, Math.round(Number(n) || 75)));
-let P = 75;
-// Nothing is saved, so the dashboard learns the minimum from its address.
-const dashboardUrl = (hash = '') => `/dashboard/${P === 75 ? '' : `?min=${P}`}${hash}`;
+// The minimum is a setting, remembered in a cookie and shared with the dashboard.
+let P = clampP(getSetting('min') ?? 75);
 let S = story(P);
 let TL = timeline(S);
 
@@ -320,7 +320,7 @@ function setP(next) {
   show(fromProgress(progress));
   paintRule();
   syncTry();
-  for (const a of $$('a[href^="/dashboard/"]')) a.href = dashboardUrl('#start');
+  setSetting('min', P);
 }
 
 ruleBtn.addEventListener('click', (e) => {
@@ -461,7 +461,7 @@ async function handleReports(files) {
     setPending(report);
     dropState('done', `Found ${plural(report.courses.length, 'course')}`, 'Opening your dashboard to check them.');
     pool.setLevel(108);
-    setTimeout(() => location.assign(dashboardUrl()), reduce ? 0 : 700);
+    setTimeout(() => location.assign('/dashboard/'), reduce ? 0 : 700);
   } catch (err) {
     dropState('error', 'That did not work', err instanceof ReportError ? err.message : 'That file could not be read. Open the dashboard and paste the table instead.');
     pool.setLevel(REST);

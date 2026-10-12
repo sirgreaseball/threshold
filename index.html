@@ -17,15 +17,7 @@
     <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32" />
     <link rel="apple-touch-icon" href="/icon-180.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
-    <script>
-      (function () {
-        var t = null;
-        try { t = localStorage.getItem('threshold.theme'); } catch (e) {}
-        var d = document.documentElement;
-        d.dataset.theme = t || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-        d.classList.add('js');
-      })();
-    </script>
+    <script src="/t.js"></script>
     <script type="module" src="/src/landing.js"></script>
   </head>
   <body class="landing">
