@@ -285,10 +285,12 @@ if (reduce) {
 // Beat copy rises up through the water and comes to rest at its anchor (scrubbed).
 const mm = gsap.matchMedia();
 if (!reduce) {
-  $$('.beat:not(.beat--hero)').forEach((beat) => {
-    const copy = $('.beat__copy', beat);
-    gsap.fromTo(copy, { y: 80 }, { y: 0, ease: 'none', scrollTrigger: { trigger: beat, start: 'top bottom', end: 'top top', scrub: true } });
-    gsap.fromTo(copy, { autoAlpha: 0 }, { autoAlpha: 1, ease: 'none', scrollTrigger: { trigger: beat, start: 'top bottom', end: 'top 75%', scrub: true } });
+  mm.add('(min-width: 1024px)', () => {
+    $$('.beat:not(.beat--hero)').forEach((beat) => {
+      const copy = $('.beat__copy', beat);
+      gsap.fromTo(copy, { y: 80 }, { y: 0, ease: 'none', scrollTrigger: { trigger: beat, start: 'top bottom', end: 'top top', scrub: true } });
+      gsap.fromTo(copy, { autoAlpha: 0 }, { autoAlpha: 1, ease: 'none', scrollTrigger: { trigger: beat, start: 'top bottom', end: 'top 75%', scrub: true } });
+    });
   });
   mm.add('(min-width: 768px)', () => {
     gsap.to('.hero__title, .hero__below', {
@@ -334,8 +336,25 @@ function holdBeats() {
 
 // Below 1024px the ledger runs along the bottom, where the hero's buttons are, so it
 // arrives with the first beat.
+// Rising from the bottom, each beat's copy would cross the ledger, so here it
+// appears at its anchor instead: it stays put (y undoes the scroll) and fades in
+// once the copy before it has gone. It is refreshed before the hold that follows.
 mm.add('(max-width: 1023px)', () => {
   gsap.fromTo('.ledger', { autoAlpha: 0 }, { autoAlpha: 1, ease: 'none', scrollTrigger: { trigger: '.beat--a', start: 'top 75%', end: 'top 35%', scrub: true } });
+  // and leaves before the stage scrolls it up through the last beat's held copy
+  gsap.fromTo('.ledger', { autoAlpha: 1 }, { autoAlpha: 0, ease: 'none', immediateRender: false, scrollTrigger: { trigger: '.stage', start: 'bottom bottom', end: 'bottom 90%', scrub: true } });
+  $$('.beat:not(.beat--hero) .beat__copy').forEach((copy) =>
+    gsap.fromTo(
+      copy,
+      { y: () => -innerHeight * 0.25, autoAlpha: 0 },
+      {
+        y: 0,
+        autoAlpha: 1,
+        ease: 'none',
+        scrollTrigger: { trigger: copy.closest('.beat'), start: 'top 25%', end: 'top top', scrub: true, invalidateOnRefresh: true, refreshPriority: 1 },
+      },
+    ),
+  );
 });
 
 // On phones the HUD sits top right, in the way of everything scrolling out. So the
